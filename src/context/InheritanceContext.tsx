@@ -1,12 +1,14 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
+import { validate, type ValidationError } from '../lib/validation';
 
 export interface State {
   decedent: Decedent;
   persons: Person[];
   results: CalculationResult[];
   selectedPersonId: string | null;
+  validationErrors: ValidationError[];
 }
 
 export type Action =
@@ -26,13 +28,21 @@ const initialState: State = {
   persons: [],
   results: [],
   selectedPersonId: null,
+  validationErrors: [],
 };
+
+function computeDerived(decedent: Decedent, persons: Person[]) {
+  return {
+    results: calculateShares(decedent, persons),
+    validationErrors: validate(persons, decedent),
+  };
+}
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DECEDENT': {
       const decedent = { ...state.decedent, ...action.payload };
-      return { ...state, decedent, results: calculateShares(decedent, state.persons) };
+      return { ...state, decedent, ...computeDerived(decedent, state.persons) };
     }
     case 'ADD_PERSON': {
       const newPerson: Person = {
@@ -45,7 +55,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         persons,
-        results: calculateShares(state.decedent, persons),
+        ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
     }
@@ -53,14 +63,14 @@ function reducer(state: State, action: Action): State {
       const persons = state.persons.map(p =>
         p.id === action.payload.id ? { ...p, ...action.payload.updates } : p
       );
-      return { ...state, persons, results: calculateShares(state.decedent, persons) };
+      return { ...state, persons, ...computeDerived(state.decedent, persons) };
     }
     case 'DELETE_PERSON': {
       const persons = state.persons.filter(p => p.id !== action.payload.id);
       return {
         ...state,
         persons,
-        results: calculateShares(state.decedent, persons),
+        ...computeDerived(state.decedent, persons),
         selectedPersonId:
           state.selectedPersonId === action.payload.id ? null : state.selectedPersonId,
       };
@@ -73,7 +83,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         decedent: action.payload.decedent,
         persons: action.payload.persons,
-        results: calculateShares(action.payload.decedent, action.payload.persons),
+        ...computeDerived(action.payload.decedent, action.payload.persons),
         selectedPersonId: null,
       };
     }
