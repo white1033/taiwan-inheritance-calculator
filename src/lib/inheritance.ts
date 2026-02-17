@@ -47,6 +47,24 @@ function reservedRatio(relation: Relation, _activeOrder: number | null): Fractio
 }
 
 /**
+ * Check if a person has any living descendant (recursively).
+ * A "living" descendant is one who is not 拋棄繼承, 死亡, or 死亡絕嗣,
+ * or who is dead but has their own living descendants.
+ */
+function hasLivingDescendant(personId: string, persons: Person[]): boolean {
+  const children = persons.filter(p => p.parentId === personId);
+  for (const child of children) {
+    if (child.status !== '拋棄繼承' && child.status !== '死亡' && child.status !== '死亡絕嗣') {
+      return true;
+    }
+    if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Determine which inheritance order is active.
  * We check orders 1 through 4 and return the first order that has
  * at least one active heir (not renounced). An "active" heir in an order
@@ -73,7 +91,7 @@ function determineActiveOrder(persons: Person[]): number | null {
     const hasActive = orderPersons.some(p => {
       if (p.status === '拋棄繼承') return false;
       if (p.status === '死亡' || p.status === '死亡絕嗣') {
-        return persons.some(rep => rep.status === '代位繼承' && rep.parentId === p.id);
+        return hasLivingDescendant(p.id, persons);
       }
       if (p.status === '再轉繼承' && !p.parentId) {
         return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
@@ -141,7 +159,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
         if (p.status === '再轉繼承' && p.parentId) return false;
         if (p.status === '拋棄繼承') return false;
         if (p.status === '死亡' || p.status === '死亡絕嗣') {
-          return persons.some(rep => rep.status === '代位繼承' && rep.parentId === p.id);
+          return hasLivingDescendant(p.id, persons);
         }
         if (p.status === '再轉繼承' && !p.parentId) {
           return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
@@ -275,13 +293,24 @@ function processSlotHolder(
 
       const perRep = divide(slotShare, frac(repHeirs.length));
       for (const rep of repHeirs) {
-        results.push({
-          id: rep.id,
-          name: rep.name,
-          relation: rep.relation,
-          inheritanceShare: perRep,
-          reservedShare: multiply(perRep, reservedRatio(rep.relation, activeOrder)),
-        });
+        const repSubHeirs = persons.filter(
+          p => p.status === '代位繼承' && p.parentId === rep.id
+        );
+        if (rep.deathDate && repSubHeirs.length > 0) {
+          // This rep heir is also dead with sub-heirs — recurse
+          processSlotHolder(
+            { ...rep, status: '死亡' } as Person,
+            perRep, activeOrder, persons, results,
+          );
+        } else {
+          results.push({
+            id: rep.id,
+            name: rep.name,
+            relation: rep.relation,
+            inheritanceShare: perRep,
+            reservedShare: multiply(perRep, reservedRatio(rep.relation, activeOrder)),
+          });
+        }
       }
     } else {
       // Dead with no representation heirs: slot is lost (zero share)
@@ -311,13 +340,24 @@ function processSlotHolder(
     if (subHeirs.length > 0) {
       const perSub = divide(slotShare, frac(subHeirs.length));
       for (const sub of subHeirs) {
-        results.push({
-          id: sub.id,
-          name: sub.name,
-          relation: sub.relation,
-          inheritanceShare: perSub,
-          reservedShare: multiply(perSub, reservedRatio(sub.relation, activeOrder)),
-        });
+        const subSubHeirs = persons.filter(
+          p => p.status === '再轉繼承' && p.parentId === sub.id
+        );
+        if (sub.deathDate && subSubHeirs.length > 0) {
+          // This sub-heir is also dead with their own sub-heirs — recurse
+          processSlotHolder(
+            { ...sub, status: '再轉繼承' } as Person,
+            perSub, activeOrder, persons, results,
+          );
+        } else {
+          results.push({
+            id: sub.id,
+            name: sub.name,
+            relation: sub.relation,
+            inheritanceShare: perSub,
+            reservedShare: multiply(perSub, reservedRatio(sub.relation, activeOrder)),
+          });
+        }
       }
     }
   }
