@@ -158,6 +158,46 @@ describe('calculateShares', () => {
       expectShare(results, '孫1', 1, 6);
       expectShare(results, '孫2', 1, 6);
     });
+
+    it('dead child with no representation heirs: share redistributed to others', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '死亡', deathDate: '2023-06-01' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 1, 2);
+      expectShare(results, '長子', 1, 2);
+      expectShare(results, '次子', 0, 1);
+    });
+
+    it('all children dead with no representation: falls to next order', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: '3', name: '次子', relation: '子女', status: '死亡絕嗣', deathDate: '2023-02-01' },
+        { id: '4', name: '父親', relation: '父', status: '一般繼承' },
+        { id: '5', name: '母親', relation: '母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 1, 2);
+      expectShare(results, '長子', 0, 1);
+      expectShare(results, '次子', 0, 1);
+      expectShare(results, '父親', 1, 4);
+      expectShare(results, '母親', 1, 4);
+    });
+
+    it('re-transfer origin with no sub-heirs: share redistributed to others', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '再轉繼承', deathDate: '2024-03-01' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 1, 2);
+      expectShare(results, '長子', 1, 2);
+      expectShare(results, '次子', 0, 1);
+    });
   });
 
   describe('Re-transfer (再轉繼承)', () => {

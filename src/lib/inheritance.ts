@@ -69,8 +69,17 @@ function determineActiveOrder(persons: Person[]): number | null {
 
     if (orderPersons.length === 0) continue;
 
-    // Check if at least one person in this order is not renounced
-    const hasActive = orderPersons.some(p => p.status !== '拋棄繼承');
+    // Check if at least one person in this order is actively inheritable
+    const hasActive = orderPersons.some(p => {
+      if (p.status === '拋棄繼承') return false;
+      if (p.status === '死亡' || p.status === '死亡絕嗣') {
+        return persons.some(rep => rep.status === '代位繼承' && rep.parentId === p.id);
+      }
+      if (p.status === '再轉繼承' && !p.parentId) {
+        return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
+      }
+      return true;
+    });
 
     if (hasActive) return order;
   }
@@ -121,17 +130,22 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
   const spouseShareType = spouse ? getSpouseFixedShare(activeOrder) : null;
 
   // Collect the "slot" holders in the active order.
-  // A "slot" is a direct heir position. Dead heirs with representation or
-  // re-transfer heirs still count as a slot.
+  // A "slot" is a direct heir position. Dead heirs count as a slot only if
+  // they have representation sub-heirs; otherwise their share redistributes
+  // to remaining heirs. Same for re-transfer origins without sub-heirs.
   const slotHolders = activeOrder !== null
     ? persons.filter(p => {
         const pOrder = getOrder(p.relation);
         if (pOrder !== activeOrder) return false;
-        // Must be a direct heir (not a sub-heir)
         if (p.status === '代位繼承') return false;
         if (p.status === '再轉繼承' && p.parentId) return false;
-        // Renounced heirs do not count as slots
         if (p.status === '拋棄繼承') return false;
+        if (p.status === '死亡' || p.status === '死亡絕嗣') {
+          return persons.some(rep => rep.status === '代位繼承' && rep.parentId === p.id);
+        }
+        if (p.status === '再轉繼承' && !p.parentId) {
+          return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
+        }
         return true;
       })
     : [];
