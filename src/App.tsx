@@ -7,11 +7,11 @@ import { ExportToolbar } from './components/ExportToolbar.tsx';
 export default function App() {
   return (
     <InheritanceProvider>
-      <div className="h-screen flex flex-col">
+      <div id="app-root" className="h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex overflow-hidden">
           <LeftPanel />
-          <main className="flex-1">
+          <main id="family-tree" className="flex-1">
             <FamilyTree />
           </main>
         </div>
