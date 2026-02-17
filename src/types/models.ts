@@ -11,6 +11,7 @@ export type InheritanceStatus =
 export type Relation =
   | '配偶'
   | '子女'
+  | '子女之配偶'
   | '父'
   | '母'
   | '兄弟姊妹'
@@ -26,6 +27,8 @@ export function getOrder(relation: Relation): number | null {
       return null; // unconditional heir
     case '子女':
       return 1;
+    case '子女之配偶':
+      return null;
     case '父':
     case '母':
       return 2;
@@ -76,6 +79,7 @@ export const INHERITANCE_STATUS_OPTIONS: InheritanceStatus[] = [
 export const RELATION_OPTIONS: Relation[] = [
   '配偶',
   '子女',
+  '子女之配偶',
   '父',
   '母',
   '兄弟姊妹',
