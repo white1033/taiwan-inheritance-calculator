@@ -64,18 +64,25 @@ export function buildTreeLayout(
     });
   }
 
+  function hasSpouseNode(personId: string): boolean {
+    return persons.some(
+      (p) => p.parentId === personId && p.relation === '子女之配偶',
+    );
+  }
+
   /** Calculate the width needed by a person and all their descendants */
   function subtreeWidth(personId: string): number {
     const childPersons = persons.filter(
       (p) => p.parentId === personId && p.relation !== '子女之配偶',
     );
-    if (childPersons.length === 0) return NODE_WIDTH;
+    const selfWidth = hasSpouseNode(personId) ? NODE_WIDTH * 2 + H_GAP : NODE_WIDTH;
+    if (childPersons.length === 0) return selfWidth;
     const childrenWidth = childPersons.reduce(
       (sum, c) => sum + subtreeWidth(c.id),
       0,
     );
     return Math.max(
-      NODE_WIDTH,
+      selfWidth,
       childrenWidth + (childPersons.length - 1) * H_GAP,
     );
   }
@@ -86,8 +93,12 @@ export function buildTreeLayout(
     const personSpouse = persons.find(
       (p) => p.parentId === personId && p.relation === '子女之配偶',
     );
+    // When a spouse exists, the person is shifted right from subtree center
+    const offset = personSpouse ? (NODE_WIDTH + H_GAP) / 2 : 0;
+    const personCx = cx + offset;
+
     if (personSpouse) {
-      addPersonNode(personSpouse, cx - NODE_WIDTH - H_GAP, y);
+      addPersonNode(personSpouse, personCx - NODE_WIDTH / 2 - H_GAP - NODE_WIDTH, y);
       edges.push({
         id: `e-${personId}-${personSpouse.id}`,
         source: personId,
@@ -112,7 +123,8 @@ export function buildTreeLayout(
     for (const child of childPersons) {
       const w = subtreeWidth(child.id);
       const childCx = currentX + w / 2;
-      addPersonNode(child, childCx - NODE_WIDTH / 2, childY);
+      const childOffset = hasSpouseNode(child.id) ? (NODE_WIDTH + H_GAP) / 2 : 0;
+      addPersonNode(child, childCx + childOffset - NODE_WIDTH / 2, childY);
       edges.push({
         id: `e-${personId}-${child.id}`,
         source: personId,
@@ -194,7 +206,8 @@ export function buildTreeLayout(
   for (const child of directChildren) {
     const w = subtreeWidth(child.id);
     const cx = childX + w / 2;
-    addPersonNode(child, cx - NODE_WIDTH / 2, childY);
+    const offset = hasSpouseNode(child.id) ? (NODE_WIDTH + H_GAP) / 2 : 0;
+    addPersonNode(child, cx + offset - NODE_WIDTH / 2, childY);
     edges.push({
       id: `e-${decedent.id}-${child.id}`,
       source: decedent.id,
