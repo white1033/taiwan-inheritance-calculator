@@ -6,6 +6,15 @@ import { exportToPdf, exportToPng, printPage } from '../lib/pdf-export';
 export function ExportToolbar() {
   const { state, dispatch } = useInheritance();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasErrors = state.validationErrors.length > 0;
+
+  function guardedExport(fn: () => void | Promise<void>) {
+    if (hasErrors) {
+      alert('請先修正所有驗證錯誤後再匯出');
+      return;
+    }
+    fn();
+  }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -40,15 +49,17 @@ export function ExportToolbar() {
     <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 flex gap-2 lg:gap-3 overflow-x-auto">
       <button
         type="button"
-        onClick={() => printPage()}
-        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+        disabled={hasErrors}
+        onClick={() => guardedExport(() => printPage())}
+        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         列印
       </button>
       <button
         type="button"
-        onClick={() => exportToExcel(state.decedent, state.persons)}
-        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+        disabled={hasErrors}
+        onClick={() => guardedExport(() => exportToExcel(state.decedent, state.persons))}
+        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         Excel 匯出
       </button>
@@ -68,15 +79,17 @@ export function ExportToolbar() {
       />
       <button
         type="button"
-        onClick={handlePdfExport}
-        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+        disabled={hasErrors}
+        onClick={() => guardedExport(handlePdfExport)}
+        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         PDF 匯出
       </button>
       <button
         type="button"
-        onClick={handlePngExport}
-        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+        disabled={hasErrors}
+        onClick={() => guardedExport(handlePngExport)}
+        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         繼承系統圖
       </button>

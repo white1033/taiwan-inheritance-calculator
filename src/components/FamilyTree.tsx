@@ -36,6 +36,7 @@ export function FamilyTree() {
         state.selectedPersonId,
         onSelect,
         onDelete,
+        state.validationErrors,
       ),
     [
       state.decedent,
@@ -44,6 +45,7 @@ export function FamilyTree() {
       state.selectedPersonId,
       onSelect,
       onDelete,
+      state.validationErrors,
     ],
   );
 

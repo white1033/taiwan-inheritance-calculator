@@ -10,6 +10,11 @@ export function PersonEditor() {
   const person = state.persons.find(p => p.id === state.selectedPersonId);
   if (!person) return null;
 
+  const errors = state.validationErrors.filter(e => e.personId === person.id);
+  function fieldError(field: string): string | undefined {
+    return errors.find(e => e.field === field)?.message;
+  }
+
   function update(updates: Partial<Person>) {
     dispatch({ type: 'UPDATE_PERSON', payload: { id: person!.id, updates } });
   }
@@ -37,9 +42,12 @@ export function PersonEditor() {
             type="text"
             value={person.name}
             onChange={e => update({ name: e.target.value })}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldError('name') ? 'border-red-400' : 'border-slate-300'}`}
             placeholder="請輸入姓名"
           />
+          {fieldError('name') && (
+            <p className="text-xs text-red-500 mt-1">{fieldError('name')}</p>
+          )}
         </div>
 
         <div>
@@ -48,12 +56,15 @@ export function PersonEditor() {
             id="person-relation"
             value={person.relation}
             onChange={e => update({ relation: e.target.value as Person['relation'] })}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldError('relation') ? 'border-red-400' : 'border-slate-300'}`}
           >
             {RELATION_OPTIONS.map(r => (
               <option key={r} value={r}>{r}</option>
             ))}
           </select>
+          {fieldError('relation') && (
+            <p className="text-xs text-red-500 mt-1">{fieldError('relation')}</p>
+          )}
         </div>
 
         <div>
@@ -77,7 +88,7 @@ export function PersonEditor() {
               id="person-parentId"
               value={person.parentId || ''}
               onChange={e => update({ parentId: e.target.value || undefined })}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldError('parentId') ? 'border-red-400' : 'border-slate-300'}`}
             >
               <option value="">請選擇</option>
               {state.persons
@@ -86,6 +97,9 @@ export function PersonEditor() {
                   <option key={p.id} value={p.id}>{p.name || '(未命名)'}</option>
                 ))}
             </select>
+            {fieldError('parentId') && (
+              <p className="text-xs text-red-500 mt-1">{fieldError('parentId')}</p>
+            )}
           </div>
         )}
 
@@ -107,8 +121,11 @@ export function PersonEditor() {
             type="date"
             value={person.deathDate || ''}
             onChange={e => update({ deathDate: e.target.value || undefined })}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldError('deathDate') ? 'border-red-400' : 'border-slate-300'}`}
           />
+          {fieldError('deathDate') && (
+            <p className="text-xs text-red-500 mt-1">{fieldError('deathDate')}</p>
+          )}
         </div>
 
         <div>

@@ -1,6 +1,7 @@
 import type { Edge } from '@xyflow/react';
 import type { Person, Decedent } from '../types/models.ts';
 import type { CalculationResult } from './inheritance.ts';
+import type { ValidationError } from './validation.ts';
 import { ZERO } from './fraction.ts';
 import type { PersonNodeData, PersonNodeType } from '../components/PersonNode.tsx';
 
@@ -16,11 +17,13 @@ export function buildTreeLayout(
   selectedId: string | null,
   onSelect: (id: string) => void,
   onDelete: (id: string) => void,
+  validationErrors: ValidationError[] = [],
 ): { nodes: PersonNodeType[]; edges: Edge[] } {
   const nodes: PersonNodeType[] = [];
   const edges: Edge[] = [];
 
   const resultMap = new Map(results.map((r) => [r.id, r]));
+  const personErrorIds = new Set(validationErrors.map((e) => e.personId));
 
   // Decedent node at center top
   nodes.push({
@@ -76,6 +79,7 @@ export function buildTreeLayout(
         reservedShare: result?.reservedShare ?? ZERO,
         isDecedent: false,
         isSelected: selectedId === person.id,
+        hasErrors: personErrorIds.has(person.id),
         onSelect,
         onDelete,
       } satisfies PersonNodeData,

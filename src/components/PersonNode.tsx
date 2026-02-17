@@ -16,6 +16,7 @@ export interface PersonNodeData extends Record<string, unknown> {
   reservedShare?: Fraction;
   isDecedent?: boolean;
   isSelected?: boolean;
+  hasErrors?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -43,7 +44,11 @@ export const PersonNode = memo(function PersonNode({
   const colorClass = data.isDecedent
     ? STATUS_COLORS.decedent
     : STATUS_COLORS[data.status];
-  const ringClass = data.isSelected ? 'ring-2 ring-blue-500' : '';
+  const ringClass = data.isSelected
+    ? 'ring-2 ring-blue-500'
+    : data.hasErrors
+      ? 'ring-2 ring-red-400'
+      : '';
 
   return (
     <div
