@@ -17,8 +17,12 @@ export interface PersonNodeData extends Record<string, unknown> {
   isDecedent?: boolean;
   isSelected?: boolean;
   hasErrors?: boolean;
+  hasCurrentSpouse?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onContextMenu?: (id: string, isDecedent: boolean, event: React.MouseEvent) => void;
+  onAddChild?: (id: string) => void;
+  onAddSpouse?: (id: string) => void;
 }
 
 export type PersonNodeType = Node<PersonNodeData, 'person'>;
@@ -54,6 +58,7 @@ export const PersonNode = memo(function PersonNode({
     <div
       className={`bg-white rounded-lg shadow-md border-t-4 ${colorClass} ${ringClass} w-52 cursor-pointer relative group`}
       onClick={() => data.onSelect?.(id)}
+      onContextMenu={(e) => { e.preventDefault(); data.onContextMenu?.(id, !!data.isDecedent, e); }}
     >
       <Handle type="target" position={Position.Top} className="!bg-slate-400" />
 
@@ -114,6 +119,29 @@ export const PersonNode = memo(function PersonNode({
             <div className="text-slate-400 font-mono">
               特留分 {toString(data.reservedShare)}
             </div>
+          )}
+        </div>
+      )}
+
+      {!data.isDecedent && (
+        <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); data.onAddChild?.(id); }}
+            className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+            title="新增子女"
+          >
+            +子女
+          </button>
+          {!data.hasCurrentSpouse && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); data.onAddSpouse?.(id); }}
+              className="text-xs px-2 py-0.5 bg-orange-50 text-orange-600 rounded hover:bg-orange-100"
+              title="新增配偶"
+            >
+              +配偶
+            </button>
           )}
         </div>
       )}

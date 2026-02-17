@@ -150,6 +150,39 @@ export function PersonEditor() {
           />
         </div>
 
+        {person.relation !== '配偶' && (
+          <div className="border-t border-slate-200 pt-3">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              此人的親屬
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => dispatch({
+                  type: 'ADD_SUB_HEIR',
+                  payload: { parentId: person.id, relation: '子女' },
+                })}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              >
+                + 新增子女
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch({
+                  type: 'ADD_SUB_HEIR',
+                  payload: { parentId: person.id, relation: '子女之配偶' },
+                })}
+                disabled={state.persons.some(
+                  p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate
+                )}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                + 新增配偶
+              </button>
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => dispatch({ type: 'DELETE_PERSON', payload: { id: person.id } })}

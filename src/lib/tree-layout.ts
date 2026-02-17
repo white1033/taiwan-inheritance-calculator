@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { Edge } from '@xyflow/react';
 import type { Person, Decedent } from '../types/models.ts';
 import type { CalculationResult } from './inheritance.ts';
@@ -18,12 +19,21 @@ export function buildTreeLayout(
   onSelect: (id: string) => void,
   onDelete: (id: string) => void,
   validationErrors: ValidationError[] = [],
+  onContextMenu?: (id: string, isDecedent: boolean, event: React.MouseEvent) => void,
+  onAddChild?: (id: string) => void,
+  onAddSpouse?: (id: string) => void,
 ): { nodes: PersonNodeType[]; edges: Edge[] } {
   const nodes: PersonNodeType[] = [];
   const edges: Edge[] = [];
 
   const resultMap = new Map(results.map((r) => [r.id, r]));
   const personErrorIds = new Set(validationErrors.map((e) => e.personId));
+
+  function hasCurrentSpouse(personId: string): boolean {
+    return persons.some(
+      (p) => p.parentId === personId && p.relation === '子女之配偶' && !p.divorceDate,
+    );
+  }
 
   function addPersonNode(person: Person, x: number, y: number) {
     const result = resultMap.get(person.id);
@@ -44,8 +54,12 @@ export function buildTreeLayout(
         isDecedent: false,
         isSelected: selectedId === person.id,
         hasErrors: personErrorIds.has(person.id),
+        hasCurrentSpouse: hasCurrentSpouse(person.id),
         onSelect,
         onDelete,
+        onContextMenu,
+        onAddChild,
+        onAddSpouse,
       } satisfies PersonNodeData,
     });
   }
@@ -132,6 +146,9 @@ export function buildTreeLayout(
       isSelected: false,
       onSelect,
       onDelete,
+      onContextMenu,
+      onAddChild,
+      onAddSpouse,
     } satisfies PersonNodeData,
   });
 
