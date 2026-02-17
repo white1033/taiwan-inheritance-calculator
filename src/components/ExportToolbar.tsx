@@ -37,25 +37,25 @@ export function ExportToolbar() {
   }
 
   return (
-    <footer className="no-print bg-slate-50 border-t border-slate-200 px-6 py-3 flex gap-3">
+    <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 flex gap-2 lg:gap-3 overflow-x-auto">
       <button
         type="button"
         onClick={() => printPage()}
-        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors"
+        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
       >
         列印
       </button>
       <button
         type="button"
         onClick={() => exportToExcel(state.decedent, state.persons)}
-        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors"
+        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
       >
         Excel 匯出
       </button>
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors"
+        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
       >
         Excel 匯入
       </button>
@@ -69,14 +69,14 @@ export function ExportToolbar() {
       <button
         type="button"
         onClick={handlePdfExport}
-        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors"
+        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
       >
         PDF 匯出
       </button>
       <button
         type="button"
         onClick={handlePngExport}
-        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors"
+        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
       >
         繼承系統圖
       </button>

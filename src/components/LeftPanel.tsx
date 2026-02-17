@@ -15,12 +15,40 @@ const HEIR_BUTTONS: { label: string; relation: Relation }[] = [
   { label: '+ 外祖母', relation: '外祖母' },
 ];
 
-export function LeftPanel() {
+interface LeftPanelProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function LeftPanel({ open, onClose }: LeftPanelProps) {
   const { state, dispatch } = useInheritance();
   const hasSpouse = state.persons.some(p => p.relation === '配偶');
 
   return (
-    <div className="w-80 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+    <div
+      className={[
+        'bg-white flex flex-col overflow-y-auto border-r border-slate-200',
+        // Desktop: always visible, fixed width
+        'lg:relative lg:translate-x-0 lg:w-80 lg:z-auto',
+        // Mobile/Tablet: slide-in drawer
+        'fixed inset-y-0 left-0 z-40 w-80 max-w-[85vw] transition-transform duration-300 ease-in-out',
+        open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+      ].join(' ')}
+    >
+      {/* Close button for mobile */}
+      <div className="lg:hidden flex justify-end p-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-md hover:bg-slate-100 transition-colors text-slate-500"
+          aria-label="Close panel"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
       {/* Decedent Info */}
       <section className="p-4 border-b border-slate-200">
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
