@@ -27,8 +27,9 @@ export function LeftPanel() {
         </h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-slate-600 mb-1">姓名</label>
+            <label htmlFor="decedent-name" className="block text-sm text-slate-600 mb-1">姓名</label>
             <input
+              id="decedent-name"
               type="text"
               value={state.decedent.name}
               onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { name: e.target.value } })}
@@ -37,8 +38,9 @@ export function LeftPanel() {
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-600 mb-1">死亡日期</label>
+            <label htmlFor="decedent-deathDate" className="block text-sm text-slate-600 mb-1">死亡日期</label>
             <input
+              id="decedent-deathDate"
               type="date"
               value={state.decedent.deathDate || ''}
               onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { deathDate: e.target.value } })}
@@ -58,6 +60,7 @@ export function LeftPanel() {
             const disabled = relation === '配偶' && hasSpouse;
             return (
               <button
+                type="button"
                 key={relation}
                 onClick={() => dispatch({ type: 'ADD_PERSON', payload: { relation } })}
                 disabled={disabled}
