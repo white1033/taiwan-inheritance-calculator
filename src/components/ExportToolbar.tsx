@@ -29,6 +29,14 @@ export function ExportToolbar() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  async function handleExcelExport() {
+    try {
+      await exportToExcel(state.decedent, state.persons);
+    } catch (err) {
+      alert('Excel 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+    }
+  }
+
   async function handlePdfExport() {
     try {
       await exportToPdf('app-root', '繼承系統表.pdf');
@@ -58,7 +66,7 @@ export function ExportToolbar() {
       <button
         type="button"
         disabled={hasErrors}
-        onClick={() => guardedExport(() => exportToExcel(state.decedent, state.persons))}
+        onClick={() => guardedExport(handleExcelExport)}
         className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         Excel 匯出

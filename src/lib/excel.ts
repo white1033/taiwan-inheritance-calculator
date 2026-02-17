@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import type { Person, Decedent, Relation, InheritanceStatus } from '../types/models';
 import { RELATION_OPTIONS, INHERITANCE_STATUS_OPTIONS } from '../types/models';
 
@@ -91,7 +90,8 @@ export function fromExcelData(rows: ExcelRow[]): { decedent: Decedent; persons: 
   };
 }
 
-export function exportToExcel(decedent: Decedent, persons: Person[]) {
+export async function exportToExcel(decedent: Decedent, persons: Person[]) {
+  const XLSX = await import('xlsx');
   const data = toExcelData(decedent, persons);
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -100,24 +100,15 @@ export function exportToExcel(decedent: Decedent, persons: Person[]) {
   XLSX.writeFile(wb, `繼承系統表_${safeName}.xlsx`);
 }
 
-export function importFromExcel(file: File): Promise<{ decedent: Decedent; persons: Person[] }> {
+export async function importFromExcel(file: File): Promise<{ decedent: Decedent; persons: Person[] }> {
   if (file.size > MAX_IMPORT_SIZE) {
-    return Promise.reject(new Error(`檔案大小超過限制（最大 ${MAX_IMPORT_SIZE / 1024 / 1024} MB）`));
+    throw new Error(`檔案大小超過限制（最大 ${MAX_IMPORT_SIZE / 1024 / 1024} MB）`);
   }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<ExcelRow>(ws);
-        resolve(fromExcelData(rows));
-      } catch (err) {
-        reject(err);
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
+  const XLSX = await import('xlsx');
+  const buffer = await file.arrayBuffer();
+  const data = new Uint8Array(buffer);
+  const wb = XLSX.read(data, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<ExcelRow>(ws);
+  return fromExcelData(rows);
 }

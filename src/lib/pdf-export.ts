@@ -1,9 +1,9 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 export async function exportToPdf(elementId: string, filename: string) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error(`Element #${elementId} not found`);
+
+  const { default: html2canvas } = await import('html2canvas');
+  const { default: jsPDF } = await import('jspdf');
 
   const canvas = await html2canvas(element, {
     scale: 2,
@@ -25,6 +25,8 @@ export async function exportToPdf(elementId: string, filename: string) {
 export async function exportToPng(elementId: string, filename: string) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error(`Element #${elementId} not found`);
+
+  const { default: html2canvas } = await import('html2canvas');
 
   const canvas = await html2canvas(element, {
     scale: 2,
