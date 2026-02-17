@@ -51,13 +51,15 @@ function reservedRatio(relation: Relation, _activeOrder: number | null): Fractio
  * A "living" descendant is one who is not 拋棄繼承, 死亡, or 死亡絕嗣,
  * or who is dead but has their own living descendants.
  */
-function hasLivingDescendant(personId: string, persons: Person[]): boolean {
+function hasLivingDescendant(personId: string, persons: Person[], visited = new Set<string>()): boolean {
+  if (visited.has(personId)) return false;
+  visited.add(personId);
   const children = persons.filter(p => p.parentId === personId);
   for (const child of children) {
     if (child.status !== '拋棄繼承' && child.status !== '死亡' && child.status !== '死亡絕嗣') {
       return true;
     }
-    if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons)) {
+    if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons, visited)) {
       return true;
     }
   }
@@ -265,7 +267,20 @@ function processSlotHolder(
   activeOrder: number | null,
   persons: Person[],
   results: CalculationResult[],
+  visited = new Set<string>(),
 ): void {
+  if (visited.has(holder.id)) {
+    results.push({
+      id: holder.id,
+      name: holder.name,
+      relation: holder.relation,
+      inheritanceShare: ZERO,
+      reservedShare: ZERO,
+    });
+    return;
+  }
+  visited.add(holder.id);
+
   if (holder.status === '一般繼承') {
     // Active heir gets full slot share
     results.push({
@@ -296,11 +311,11 @@ function processSlotHolder(
         const repSubHeirs = persons.filter(
           p => p.status === '代位繼承' && p.parentId === rep.id
         );
-        if (rep.deathDate && repSubHeirs.length > 0) {
+        if (repSubHeirs.length > 0) {
           // This rep heir is also dead with sub-heirs — recurse
           processSlotHolder(
             { ...rep, status: '死亡' } as Person,
-            perRep, activeOrder, persons, results,
+            perRep, activeOrder, persons, results, visited,
           );
         } else {
           results.push({
@@ -343,11 +358,11 @@ function processSlotHolder(
         const subSubHeirs = persons.filter(
           p => p.status === '再轉繼承' && p.parentId === sub.id
         );
-        if (sub.deathDate && subSubHeirs.length > 0) {
+        if (subSubHeirs.length > 0) {
           // This sub-heir is also dead with their own sub-heirs — recurse
           processSlotHolder(
             { ...sub, status: '再轉繼承' } as Person,
-            perSub, activeOrder, persons, results,
+            perSub, activeOrder, persons, results, visited,
           );
         } else {
           results.push({
