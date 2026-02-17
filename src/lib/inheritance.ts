@@ -21,7 +21,7 @@ export interface CalculationResult {
  * - Children, Parents, Spouse: reserved = 1/2 of statutory share
  * - Siblings, Grandparents: reserved = 1/3 of statutory share
  */
-function reservedRatio(relation: Relation, activeOrder: number | null): Fraction {
+function reservedRatio(relation: Relation, _activeOrder: number | null): Fraction {
   const order = getOrder(relation);
 
   // Spouse reserved ratio depends on which order they co-inherit with
@@ -108,7 +108,7 @@ function getSpouseFixedShare(activeOrder: number | null): Fraction | 'equal' {
  * - Re-transfer inheritance (再轉繼承)
  * - Art. 1223: Reserved shares (特留分)
  */
-export function calculateShares(decedent: Decedent, persons: Person[]): CalculationResult[] {
+export function calculateShares(_decedent: Decedent, persons: Person[]): CalculationResult[] {
   if (persons.length === 0) return [];
 
   // Find the spouse (if any)

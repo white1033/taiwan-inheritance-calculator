@@ -1,7 +1,8 @@
-import { InheritanceProvider } from './context/InheritanceContext';
-import { Header } from './components/Header';
-import { LeftPanel } from './components/LeftPanel';
-import { ExportToolbar } from './components/ExportToolbar';
+import { InheritanceProvider } from './context/InheritanceContext.tsx';
+import { Header } from './components/Header.tsx';
+import { LeftPanel } from './components/LeftPanel.tsx';
+import { FamilyTree } from './components/FamilyTree.tsx';
+import { ExportToolbar } from './components/ExportToolbar.tsx';
 
 export default function App() {
   return (
@@ -10,8 +11,8 @@ export default function App() {
         <Header />
         <div className="flex-1 flex overflow-hidden">
           <LeftPanel />
-          <main className="flex-1 bg-slate-100 flex items-center justify-center text-slate-400">
-            <p>家族樹（待實作）</p>
+          <main className="flex-1">
+            <FamilyTree />
           </main>
         </div>
         <ExportToolbar />
