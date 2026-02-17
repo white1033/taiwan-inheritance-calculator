@@ -209,6 +209,93 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Real-World Examples (from web sources)', () => {
+    // 新北地方法院案例：甲有配偶乙，育有A、B、C三子，B先於甲死亡，遺有a、b二子
+    // Source: https://pcd.judicial.gov.tw
+    it('新北地院案例：配偶+3子(1死亡有2孫代位)', () => {
+      const persons: Person[] = [
+        { id: '1', name: '乙', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: 'A', relation: '子女', status: '一般繼承' },
+        { id: '3', name: 'B', relation: '子女', status: '死亡', deathDate: '2023-06-01' },
+        { id: '4', name: 'C', relation: '子女', status: '一般繼承' },
+        { id: '5', name: 'a', relation: '子女', status: '代位繼承', parentId: '3' },
+        { id: '6', name: 'b', relation: '子女', status: '代位繼承', parentId: '3' },
+      ];
+      // 乙、A、B、C = 4 slots，每人 1/4
+      // B 死亡，其 1/4 由 a、b 代位，各得 1/8
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '乙', 1, 4);
+      expectShare(results, 'A', 1, 4);
+      expectShare(results, 'B', 0, 1);
+      expectShare(results, 'C', 1, 4);
+      expectShare(results, 'a', 1, 8);
+      expectShare(results, 'b', 1, 8);
+    });
+
+    // 屏東地政事務所案例：甲太太(配偶)、乙(長子已死)、丙(次子)
+    // 乙有2子 乙1、乙2 代位繼承
+    // Source: https://www.pthg.gov.tw/chaujou-land/
+    it('屏東地政案例：配偶+2子(1死亡有2孫代位)', () => {
+      const persons: Person[] = [
+        { id: '1', name: '甲太太', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '乙', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: '3', name: '丙', relation: '子女', status: '一般繼承' },
+        { id: '4', name: '乙1', relation: '子女', status: '代位繼承', parentId: '2' },
+        { id: '5', name: '乙2', relation: '子女', status: '代位繼承', parentId: '2' },
+      ];
+      // 甲太太、乙、丙 = 3 slots，每人 1/3
+      // 乙死亡，其 1/3 由 乙1、乙2 代位，各得 1/6
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '甲太太', 1, 3);
+      expectShare(results, '乙', 0, 1);
+      expectShare(results, '丙', 1, 3);
+      expectShare(results, '乙1', 1, 6);
+      expectShare(results, '乙2', 1, 6);
+    });
+
+    // 法律010案例：甲死亡，遺產2400萬，配偶乙＋子女丙、丁、戊(共4人)
+    // 每人應繼分 = 1/4，特留分 = 1/8
+    // Source: https://laws010.com
+    it('法律010案例：配偶+3子女均分', () => {
+      const persons: Person[] = [
+        { id: '1', name: '乙', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '丙', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '丁', relation: '子女', status: '一般繼承' },
+        { id: '4', name: '戊', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '乙', 1, 4);
+      expectShare(results, '丙', 1, 4);
+      expectShare(results, '丁', 1, 4);
+      expectShare(results, '戊', 1, 4);
+      // 特留分 = 應繼分 × 1/2 = 1/8
+      expectReserved(results, '乙', 1, 8);
+      expectReserved(results, '丙', 1, 8);
+      expectReserved(results, '丁', 1, 8);
+      expectReserved(results, '戊', 1, 8);
+    });
+
+    // 配偶無後代，父母已逝，有1哥1妹
+    // 配偶 1/2，哥哥 1/4，妹妹 1/4
+    // Source: https://www.sinsiang.com.tw
+    it('新享案例：配偶+兄弟姊妹(無子女無父母)', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '哥哥', relation: '兄弟姊妹', status: '一般繼承' },
+        { id: '3', name: '妹妹', relation: '兄弟姊妹', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶', 1, 2);
+      expectShare(results, '哥哥', 1, 4);
+      expectShare(results, '妹妹', 1, 4);
+      // 配偶特留分 = 1/2 × 1/2 = 1/4
+      // 兄弟姊妹特留分 = 1/4 × 1/3 = 1/12
+      expectReserved(results, '配偶', 1, 4);
+      expectReserved(results, '哥哥', 1, 12);
+      expectReserved(results, '妹妹', 1, 12);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);

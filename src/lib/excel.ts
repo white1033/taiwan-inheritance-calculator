@@ -16,6 +16,26 @@ interface ExcelRow {
   被繼承人死亡日期: string;
 }
 
+const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10 MB
+
+/**
+ * Escape cell values that could be interpreted as formulas in spreadsheet apps.
+ * Prefixes values starting with =, +, -, @, \t, or \r with a single quote.
+ */
+function escapeFormulaInjection(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return "'" + value;
+  }
+  return value;
+}
+
+/**
+ * Sanitize filename by removing characters invalid on most filesystems.
+ */
+function sanitizeFilename(name: string): string {
+  return name.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_');
+}
+
 export function toExcelData(decedent: Decedent, persons: Person[]): ExcelRow[] {
   return persons.map((p, i) => {
     let parentRef: number | string = '';
@@ -28,8 +48,8 @@ export function toExcelData(decedent: Decedent, persons: Person[]): ExcelRow[] {
     return {
       編號: i + 1,
       稱謂: p.relation,
-      繼承人: p.name,
-      被繼承人: decedent.name,
+      繼承人: escapeFormulaInjection(p.name),
+      被繼承人: escapeFormulaInjection(decedent.name),
       繼承狀態: p.status,
       被代位者: parentRef,
       出生日期: p.birthDate || '',
@@ -76,10 +96,14 @@ export function exportToExcel(decedent: Decedent, persons: Person[]) {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '繼承系統表');
-  XLSX.writeFile(wb, `繼承系統表_${decedent.name || '未命名'}.xlsx`);
+  const safeName = sanitizeFilename(decedent.name || '未命名');
+  XLSX.writeFile(wb, `繼承系統表_${safeName}.xlsx`);
 }
 
 export function importFromExcel(file: File): Promise<{ decedent: Decedent; persons: Person[] }> {
+  if (file.size > MAX_IMPORT_SIZE) {
+    return Promise.reject(new Error(`檔案大小超過限制（最大 ${MAX_IMPORT_SIZE / 1024 / 1024} MB）`));
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

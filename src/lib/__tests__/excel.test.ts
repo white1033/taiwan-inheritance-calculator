@@ -61,6 +61,22 @@ describe('Excel data conversion', () => {
     expect(importedDecedent.deathDate).toBeUndefined();
   });
 
+  it('escapes formula injection in names starting with =, +, -, @', () => {
+    const dangerousPersons: Person[] = [
+      { id: '1', name: '=HYPERLINK("http://evil.com")', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '+cmd|/C calc', relation: '子女', status: '一般繼承' },
+      { id: '3', name: '-1+1', relation: '子女', status: '一般繼承' },
+      { id: '4', name: '@SUM(A1:A10)', relation: '子女', status: '一般繼承' },
+      { id: '5', name: '正常名字', relation: '子女', status: '一般繼承' },
+    ];
+    const rows = toExcelData(decedent, dangerousPersons);
+    expect(rows[0]['繼承人']).toBe("'=HYPERLINK(\"http://evil.com\")");
+    expect(rows[1]['繼承人']).toBe("'+cmd|/C calc");
+    expect(rows[2]['繼承人']).toBe("'-1+1");
+    expect(rows[3]['繼承人']).toBe("'@SUM(A1:A10)");
+    expect(rows[4]['繼承人']).toBe('正常名字');
+  });
+
   it('falls back to defaults for invalid relation and status values', () => {
     const invalidRows = [
       {
