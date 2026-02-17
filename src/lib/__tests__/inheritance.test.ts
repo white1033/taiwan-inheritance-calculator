@@ -336,6 +336,91 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Multi-level Representation (多代代位繼承)', () => {
+    it('grandchild represents dead child, great-grandchild represents dead grandchild', () => {
+      // 配偶 + 子女B(死亡) + 子女G(alive)
+      // B has: 孫C(死亡, 代位) + 孫D(alive, 代位)
+      // C has: 曾孫F(代位)
+      // Slots: 配偶 + B + G = 3, each 1/3
+      // B(0) → C + D split B's 1/3 → each 1/6
+      // C(0) → F gets C's 1/6
+      const persons: Person[] = [
+        { id: '1', name: '配偶', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: 'B', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: '3', name: 'G', relation: '子女', status: '一般繼承' },
+        { id: '4', name: 'C', relation: '子女', status: '代位繼承', parentId: '2', deathDate: '2023-02-01' },
+        { id: '5', name: 'D', relation: '子女', status: '代位繼承', parentId: '2' },
+        { id: '6', name: 'F', relation: '子女', status: '代位繼承', parentId: '4' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶', 1, 3);
+      expectShare(results, 'B', 0, 1);
+      expectShare(results, 'G', 1, 3);
+      expectShare(results, 'C', 0, 1);
+      expectShare(results, 'D', 1, 6);
+      expectShare(results, 'F', 1, 6);
+    });
+
+    it('3 levels deep: child → grandchild → great-grandchild', () => {
+      // No spouse, child A(dead), grandchild B(dead, 代位 A), great-grandchild C(代位 B)
+      // Only 1 slot (A), share = 1
+      // A(0) → B(0) → C(1)
+      const persons: Person[] = [
+        { id: '1', name: 'A', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: '2', name: 'B', relation: '子女', status: '代位繼承', parentId: '1', deathDate: '2023-02-01' },
+        { id: '3', name: 'C', relation: '子女', status: '代位繼承', parentId: '2' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, 'A', 0, 1);
+      expectShare(results, 'B', 0, 1);
+      expectShare(results, 'C', 1, 1);
+    });
+
+    it('dead child with mixed sub-heirs: some alive, some dead with own sub-heirs', () => {
+      // No spouse, 2 children: A(alive), B(dead)
+      // B has: C(alive, 代位), D(dead, 代位)
+      // D has: E(代位)
+      // Slots: A + B = 2, each 1/2
+      // B(0) → C(1/4), D(0) → E(1/4)
+      const persons: Person[] = [
+        { id: '1', name: 'A', relation: '子女', status: '一般繼承' },
+        { id: '2', name: 'B', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: '3', name: 'C', relation: '子女', status: '代位繼承', parentId: '2' },
+        { id: '4', name: 'D', relation: '子女', status: '代位繼承', parentId: '2', deathDate: '2023-02-01' },
+        { id: '5', name: 'E', relation: '子女', status: '代位繼承', parentId: '4' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, 'A', 1, 2);
+      expectShare(results, 'B', 0, 1);
+      expectShare(results, 'C', 1, 4);
+      expectShare(results, 'D', 0, 1);
+      expectShare(results, 'E', 1, 4);
+    });
+  });
+
+  describe('Multi-level Re-transfer (多層再轉繼承)', () => {
+    it('re-transfer with nested re-transfer', () => {
+      // No spouse, child A(alive), child B(再轉)
+      // B has: B配偶(再轉), B子C(再轉, also dead → re-transfers to C子E)
+      // Slots: A + B = 2, each 1/2
+      // B(0) → B配偶 + C = 2 → each 1/4
+      // C(0) → E gets 1/4
+      const persons: Person[] = [
+        { id: '1', name: 'A', relation: '子女', status: '一般繼承' },
+        { id: '2', name: 'B', relation: '子女', status: '再轉繼承', deathDate: '2024-03-01' },
+        { id: '3', name: 'B配偶', relation: '子女之配偶', status: '再轉繼承', parentId: '2' },
+        { id: '4', name: 'C', relation: '子女', status: '再轉繼承', parentId: '2', deathDate: '2024-06-01' },
+        { id: '5', name: 'E', relation: '子女', status: '再轉繼承', parentId: '4' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, 'A', 1, 2);
+      expectShare(results, 'B', 0, 1);
+      expectShare(results, 'B配偶', 1, 4);
+      expectShare(results, 'C', 0, 1);
+      expectShare(results, 'E', 1, 4);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);

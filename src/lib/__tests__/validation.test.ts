@@ -73,4 +73,50 @@ describe('validate', () => {
     ];
     expect(validate(persons, decedent)).toEqual([]);
   });
+
+  it('errors on circular parentId reference', () => {
+    const persons: Person[] = [
+      { id: '1', name: 'A', relation: '子女', status: '代位繼承', parentId: '2' },
+      { id: '2', name: 'B', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'parentId') || hasError(errors, '2', 'parentId')).toBe(true);
+  });
+
+  it('errors when representation heir parent is alive', () => {
+    const persons: Person[] = [
+      { id: '1', name: 'A', relation: '子女', status: '一般繼承' },
+      { id: '2', name: 'B', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+  });
+
+  it('allows multiple spouses with divorceDate (only current spouse counts)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
+      { id: '2', name: '現任', relation: '配偶', status: '一般繼承' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'relation')).toBe(false);
+  });
+
+  it('errors when two current spouses (no divorceDate)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+      { id: '2', name: '配偶B', relation: '配偶', status: '一般繼承' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'relation')).toBe(true);
+  });
+
+  it('per-person current spouse uniqueness with parentId', () => {
+    const persons: Person[] = [
+      { id: '1', name: 'X', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+      { id: '2', name: 'X配偶A', relation: '子女之配偶', status: '再轉繼承', parentId: '1' },
+      { id: '3', name: 'X配偶B', relation: '子女之配偶', status: '再轉繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '3', 'relation')).toBe(true);
+  });
 });
