@@ -1,4 +1,5 @@
 import { useInheritance } from '../context/InheritanceContext';
+import { PersonEditor } from './PersonEditor';
 import type { Relation } from '../types/models';
 import { toString } from '../lib/fraction';
 
@@ -72,6 +73,9 @@ export function LeftPanel() {
           })}
         </div>
       </section>
+
+      {/* Person Editor */}
+      <PersonEditor />
 
       {/* Results Summary */}
       <section className="p-4 flex-1">
