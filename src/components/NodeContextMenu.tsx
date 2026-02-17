@@ -3,6 +3,7 @@ interface NodeContextMenuProps {
   y: number;
   personId: string;
   isDecedent: boolean;
+  isSpouse: boolean;
   hasCurrentSpouse: boolean;
   onAddChild: (parentId: string) => void;
   onAddSpouse: (parentId: string) => void;
@@ -16,6 +17,7 @@ export function NodeContextMenu({
   y,
   personId,
   isDecedent,
+  isSpouse,
   hasCurrentSpouse,
   onAddChild,
   onAddSpouse,
@@ -30,14 +32,16 @@ export function NodeContextMenu({
         className="fixed z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[160px]"
         style={{ left: x, top: y }}
       >
-        <button
-          type="button"
-          className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-          onClick={() => { onAddChild(personId); onClose(); }}
-        >
-          + 新增子女
-        </button>
-        {!isDecedent && !hasCurrentSpouse && (
+        {!isSpouse && (
+          <button
+            type="button"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+            onClick={() => { onAddChild(personId); onClose(); }}
+          >
+            + 新增子女
+          </button>
+        )}
+        {!isDecedent && !isSpouse && !hasCurrentSpouse && (
           <button
             type="button"
             className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
