@@ -25,42 +25,6 @@ export function buildTreeLayout(
   const resultMap = new Map(results.map((r) => [r.id, r]));
   const personErrorIds = new Set(validationErrors.map((e) => e.personId));
 
-  // Decedent node at center top
-  nodes.push({
-    id: decedent.id,
-    type: 'person',
-    position: { x: 0, y: 0 },
-    data: {
-      name: decedent.name || '(未命名)',
-      relation: '配偶',
-      status: '死亡',
-      deathDate: decedent.deathDate,
-      isDecedent: true,
-      isSelected: false,
-      onSelect,
-      onDelete,
-    } satisfies PersonNodeData,
-  });
-
-  const spouse = persons.find((p) => p.relation === '配偶');
-  const children = persons.filter(
-    (p) =>
-      p.relation === '子女' &&
-      p.status !== '代位繼承' &&
-      p.status !== '再轉繼承',
-  );
-  const parents = persons.filter(
-    (p) => p.relation === '父' || p.relation === '母',
-  );
-  const siblings = persons.filter((p) => p.relation === '兄弟姊妹');
-  const grandparents = persons.filter((p) =>
-    (['祖父', '祖母', '外祖父', '外祖母'] as string[]).includes(p.relation),
-  );
-  const subHeirs = persons.filter(
-    (p) =>
-      p.status === '代位繼承' || (p.status === '再轉繼承' && p.parentId),
-  );
-
   function addPersonNode(person: Person, x: number, y: number) {
     const result = resultMap.get(person.id);
     nodes.push({
@@ -86,7 +50,93 @@ export function buildTreeLayout(
     });
   }
 
-  // Spouse to the left
+  /** Calculate the width needed by a person and all their descendants */
+  function subtreeWidth(personId: string): number {
+    const childPersons = persons.filter(
+      (p) => p.parentId === personId && p.relation !== '子女之配偶',
+    );
+    if (childPersons.length === 0) return NODE_WIDTH;
+    const childrenWidth = childPersons.reduce(
+      (sum, c) => sum + subtreeWidth(c.id),
+      0,
+    );
+    return Math.max(
+      NODE_WIDTH,
+      childrenWidth + (childPersons.length - 1) * H_GAP,
+    );
+  }
+
+  /** Recursively layout a person's sub-heirs */
+  function layoutSubtree(personId: string, cx: number, y: number) {
+    // Find spouse of this person (子女之配偶 with matching parentId)
+    const personSpouse = persons.find(
+      (p) => p.parentId === personId && p.relation === '子女之配偶',
+    );
+    if (personSpouse) {
+      addPersonNode(personSpouse, cx - NODE_WIDTH - H_GAP, y);
+      edges.push({
+        id: `e-${personId}-${personSpouse.id}`,
+        source: personId,
+        target: personSpouse.id,
+        type: 'straight',
+        style: { strokeDasharray: '5,5' },
+      });
+    }
+
+    // Find children of this person (exclude spouses)
+    const childPersons = persons.filter(
+      (p) => p.parentId === personId && p.relation !== '子女之配偶',
+    );
+    if (childPersons.length === 0) return;
+
+    const childY = y + NODE_HEIGHT + V_GAP;
+    const totalWidth =
+      childPersons.reduce((sum, c) => sum + subtreeWidth(c.id), 0) +
+      (childPersons.length - 1) * H_GAP;
+    let currentX = cx - totalWidth / 2;
+
+    for (const child of childPersons) {
+      const w = subtreeWidth(child.id);
+      const childCx = currentX + w / 2;
+      addPersonNode(child, childCx - NODE_WIDTH / 2, childY);
+      edges.push({
+        id: `e-${personId}-${child.id}`,
+        source: personId,
+        target: child.id,
+        style:
+          child.status === '代位繼承'
+            ? { strokeDasharray: '5,5' }
+            : child.status === '再轉繼承'
+              ? { strokeDasharray: '3,3' }
+              : undefined,
+      });
+      // Recurse
+      layoutSubtree(child.id, childCx, childY);
+      currentX += w + H_GAP;
+    }
+  }
+
+  // --- Top-level layout ---
+
+  // Decedent at center
+  nodes.push({
+    id: decedent.id,
+    type: 'person',
+    position: { x: 0, y: 0 },
+    data: {
+      name: decedent.name || '(未命名)',
+      relation: '配偶',
+      status: '死亡',
+      deathDate: decedent.deathDate,
+      isDecedent: true,
+      isSelected: false,
+      onSelect,
+      onDelete,
+    } satisfies PersonNodeData,
+  });
+
+  // Spouse of decedent (direct, no parentId)
+  const spouse = persons.find((p) => p.relation === '配偶' && !p.parentId);
   if (spouse) {
     addPersonNode(spouse, -(NODE_WIDTH + H_GAP), 0);
     edges.push({
@@ -98,11 +148,13 @@ export function buildTreeLayout(
     });
   }
 
-  // Parents above
+  // Parents above (no parentId)
+  const parentPersons = persons.filter(
+    (p) => (p.relation === '父' || p.relation === '母') && !p.parentId,
+  );
   const parentY = -(NODE_HEIGHT + V_GAP);
-  const parentStartX =
-    -((parents.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-  parents.forEach((p, i) => {
+  const parentStartX = -((parentPersons.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
+  parentPersons.forEach((p, i) => {
     const x = parentStartX + i * (NODE_WIDTH + H_GAP);
     addPersonNode(p, x, parentY);
     edges.push({
@@ -112,44 +164,36 @@ export function buildTreeLayout(
     });
   });
 
-  // Children below
+  // Children below (direct children: relation=子女, no parentId)
+  const directChildren = persons.filter(
+    (p) => p.relation === '子女' && !p.parentId,
+  );
   const childY = NODE_HEIGHT + V_GAP;
-  const childStartX =
-    -((children.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-  children.forEach((child, i) => {
-    const x = childStartX + i * (NODE_WIDTH + H_GAP);
-    addPersonNode(child, x, childY);
+  const totalChildWidth =
+    directChildren.reduce((sum, c) => sum + subtreeWidth(c.id), 0) +
+    Math.max(0, directChildren.length - 1) * H_GAP;
+  let childX = -totalChildWidth / 2;
+
+  for (const child of directChildren) {
+    const w = subtreeWidth(child.id);
+    const cx = childX + w / 2;
+    addPersonNode(child, cx - NODE_WIDTH / 2, childY);
     edges.push({
       id: `e-${decedent.id}-${child.id}`,
       source: decedent.id,
       target: child.id,
     });
+    // Recurse into sub-tree
+    layoutSubtree(child.id, cx, childY);
+    childX += w + H_GAP;
+  }
 
-    const childSubHeirs = subHeirs.filter((s) => s.parentId === child.id);
-    const subY = childY + NODE_HEIGHT + V_GAP;
-    const subStartX =
-      x - ((childSubHeirs.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-    childSubHeirs.forEach((sub, j) => {
-      const sx = subStartX + j * (NODE_WIDTH + H_GAP);
-      addPersonNode(sub, sx, subY);
-      edges.push({
-        id: `e-${child.id}-${sub.id}`,
-        source: child.id,
-        target: sub.id,
-        style:
-          sub.status === '代位繼承'
-            ? { strokeDasharray: '5,5' }
-            : undefined,
-      });
-    });
-  });
-
-  // Siblings to the right
-  siblings.forEach((sib, i) => {
-    const x =
-      NODE_WIDTH +
-      H_GAP * 2 +
-      (spouse ? NODE_WIDTH + H_GAP : 0);
+  // Siblings to the right (no parentId)
+  const siblingPersons = persons.filter(
+    (p) => p.relation === '兄弟姊妹' && !p.parentId,
+  );
+  siblingPersons.forEach((sib, i) => {
+    const x = NODE_WIDTH + H_GAP * 2 + (spouse ? NODE_WIDTH + H_GAP : 0);
     const y = i * (NODE_HEIGHT + V_GAP / 2);
     addPersonNode(sib, x, y);
     edges.push({
@@ -159,11 +203,13 @@ export function buildTreeLayout(
     });
   });
 
-  // Grandparents above parents
+  // Grandparents above parents (no parentId)
+  const gpPersons = persons.filter((p) =>
+    (['祖父', '祖母', '外祖父', '外祖母'] as string[]).includes(p.relation) && !p.parentId,
+  );
   const gpY = parentY - NODE_HEIGHT - V_GAP;
-  const gpStartX =
-    -((grandparents.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-  grandparents.forEach((gp, i) => {
+  const gpStartX = -((gpPersons.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
+  gpPersons.forEach((gp, i) => {
     const x = gpStartX + i * (NODE_WIDTH + H_GAP);
     addPersonNode(gp, x, gpY);
     edges.push({
