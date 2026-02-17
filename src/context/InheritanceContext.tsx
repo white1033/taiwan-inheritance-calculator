@@ -17,17 +17,12 @@ export type Action =
   | { type: 'SELECT_PERSON'; payload: { id: string | null } }
   | { type: 'LOAD_PERSONS'; payload: { decedent: Decedent; persons: Person[] } };
 
-let nextId = 1;
 function generateId(): string {
-  return `p_${nextId++}`;
-}
-
-function recalculate(decedent: Decedent, persons: Person[]): CalculationResult[] {
-  return calculateShares(decedent, persons);
+  return `p_${crypto.randomUUID()}`;
 }
 
 const initialState: State = {
-  decedent: { id: 'decedent', name: '', deathDate: '' },
+  decedent: { id: 'decedent', name: '' },
   persons: [],
   results: [],
   selectedPersonId: null,
@@ -37,7 +32,7 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DECEDENT': {
       const decedent = { ...state.decedent, ...action.payload };
-      return { ...state, decedent, results: recalculate(decedent, state.persons) };
+      return { ...state, decedent, results: calculateShares(decedent, state.persons) };
     }
     case 'ADD_PERSON': {
       const newPerson: Person = {
@@ -50,7 +45,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         persons,
-        results: recalculate(state.decedent, persons),
+        results: calculateShares(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
     }
@@ -58,14 +53,14 @@ function reducer(state: State, action: Action): State {
       const persons = state.persons.map(p =>
         p.id === action.payload.id ? { ...p, ...action.payload.updates } : p
       );
-      return { ...state, persons, results: recalculate(state.decedent, persons) };
+      return { ...state, persons, results: calculateShares(state.decedent, persons) };
     }
     case 'DELETE_PERSON': {
       const persons = state.persons.filter(p => p.id !== action.payload.id);
       return {
         ...state,
         persons,
-        results: recalculate(state.decedent, persons),
+        results: calculateShares(state.decedent, persons),
         selectedPersonId:
           state.selectedPersonId === action.payload.id ? null : state.selectedPersonId,
       };
@@ -78,7 +73,8 @@ function reducer(state: State, action: Action): State {
         ...state,
         decedent: action.payload.decedent,
         persons: action.payload.persons,
-        results: recalculate(action.payload.decedent, action.payload.persons),
+        results: calculateShares(action.payload.decedent, action.payload.persons),
+        selectedPersonId: null,
       };
     }
     default:
