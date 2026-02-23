@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ReactFlow controls: meet 44px min touch target */
+.react-flow__controls-button {
+  width: 44px !important;
+  height: 44px !important;
+}
+
 @media print {
   .no-print { display: none !important; }
 }

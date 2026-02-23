@@ -8,7 +8,7 @@ export function Header({ onTogglePanel }: HeaderProps) {
       <button
         type="button"
         onClick={onTogglePanel}
-        className="lg:hidden p-1.5 rounded-md hover:bg-slate-700 transition-colors"
+        className="md:hidden p-2 rounded-md hover:bg-slate-700 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
         aria-label="Toggle panel"
       >
         <svg

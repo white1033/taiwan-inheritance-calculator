@@ -54,12 +54,12 @@ export function ExportToolbar() {
   }
 
   return (
-    <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 flex gap-2 lg:gap-3 overflow-x-auto">
+    <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 flex flex-wrap gap-2 lg:gap-3">
       <button
         type="button"
         disabled={hasErrors}
         onClick={() => guardedExport(() => printPage())}
-        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
+        className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         列印
       </button>
@@ -67,14 +67,14 @@ export function ExportToolbar() {
         type="button"
         disabled={hasErrors}
         onClick={() => guardedExport(handleExcelExport)}
-        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
+        className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         Excel 匯出
       </button>
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap"
+        className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px]"
       >
         Excel 匯入
       </button>
@@ -89,7 +89,7 @@ export function ExportToolbar() {
         type="button"
         disabled={hasErrors}
         onClick={() => guardedExport(handlePdfExport)}
-        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
+        className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         PDF 匯出
       </button>
@@ -97,7 +97,7 @@ export function ExportToolbar() {
         type="button"
         disabled={hasErrors}
         onClick={() => guardedExport(handlePngExport)}
-        className={`shrink-0 px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
+        className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         繼承系統圖
       </button>

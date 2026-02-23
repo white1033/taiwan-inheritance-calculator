@@ -28,19 +28,19 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
     <div
       className={[
         'bg-white flex flex-col overflow-y-auto border-r border-slate-200',
-        // Desktop: always visible, fixed width
-        'lg:relative lg:translate-x-0 lg:w-80 lg:z-auto',
-        // Mobile/Tablet: slide-in drawer
+        // Tablet+: always visible, fixed width
+        'md:relative md:translate-x-0 md:w-64 lg:w-80 md:z-auto',
+        // Mobile: slide-in drawer
         'fixed inset-y-0 left-0 z-40 w-80 max-w-[85vw] transition-transform duration-300 ease-in-out',
-        open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ].join(' ')}
     >
       {/* Close button for mobile */}
-      <div className="lg:hidden flex justify-end p-2">
+      <div className="md:hidden flex justify-end p-2">
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-slate-100 transition-colors text-slate-500"
+          className="p-2.5 rounded-md hover:bg-slate-100 transition-colors text-slate-500 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close panel"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -93,7 +93,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
                 key={relation}
                 onClick={() => dispatch({ type: 'ADD_PERSON', payload: { relation } })}
                 disabled={disabled}
-                className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[44px]"
               >
                 {label}
               </button>

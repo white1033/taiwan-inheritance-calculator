@@ -20,7 +20,7 @@ export default function App() {
           {/* Overlay for mobile when panel is open */}
           {panelOpen && (
             <div
-              className="lg:hidden fixed inset-0 bg-black/30 z-30"
+              className="md:hidden fixed inset-0 bg-black/30 z-30"
               onClick={closePanel}
               aria-hidden="true"
             />
