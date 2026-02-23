@@ -30,7 +30,7 @@ export default function App() {
           </main>
         </div>
         <ExportToolbar />
-        <div className="no-print bg-slate-100 border-t border-slate-200 px-3 py-1.5 text-center text-xs text-slate-400">
+        <div className="no-print bg-slate-100 border-t border-slate-200 px-3 py-1.5 text-center text-xs text-slate-400 landscape-hide">
           本工具僅供參考，計算結果不構成法律意見。實際繼承事務請諮詢專業律師或地政士。
         </div>
       </div>

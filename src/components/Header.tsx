@@ -4,7 +4,7 @@ interface HeaderProps {
 
 export function Header({ onTogglePanel }: HeaderProps) {
   return (
-    <header className="no-print bg-slate-800 text-white px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3">
+    <header className="no-print bg-slate-800 text-white px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3 landscape-compact">
       <button
         type="button"
         onClick={onTogglePanel}
@@ -23,7 +23,7 @@ export function Header({ onTogglePanel }: HeaderProps) {
       </button>
       <div>
         <h1 className="text-lg lg:text-xl font-bold">繼承系統表計算工具</h1>
-        <p className="text-slate-300 text-xs lg:text-sm mt-0.5 lg:mt-1">
+        <p className="text-slate-300 text-xs lg:text-sm mt-0.5 lg:mt-1 landscape-hide">
           依據台灣民法繼承編，計算法定應繼分與特留分
         </p>
       </div>
