@@ -91,7 +91,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
               <button
                 type="button"
                 key={relation}
-                onClick={() => dispatch({ type: 'ADD_PERSON', payload: { relation } })}
+                onClick={() => { dispatch({ type: 'ADD_PERSON', payload: { relation } }); onClose(); }}
                 disabled={disabled}
                 className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[44px]"
               >

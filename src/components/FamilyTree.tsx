@@ -107,6 +107,8 @@ export function FamilyTree() {
       )
     : false;
 
+  const showMobileHint = state.persons.length === 0;
+
   return (
     <>
       <ReactFlow
@@ -120,6 +122,13 @@ export function FamilyTree() {
         <Background />
         <Controls />
       </ReactFlow>
+      {showMobileHint && (
+        <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">
+          <p className="bg-slate-800/80 text-white text-sm px-4 py-2 rounded-full">
+            點擊左上角 ☰ 開始新增繼承人
+          </p>
+        </div>
+      )}
       {contextMenu && (
         <NodeContextMenu
           x={contextMenu.x}

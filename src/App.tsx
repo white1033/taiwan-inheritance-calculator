@@ -25,7 +25,7 @@ export default function App() {
               aria-hidden="true"
             />
           )}
-          <main id="family-tree" className="flex-1">
+          <main id="family-tree" className="flex-1 relative">
             <FamilyTree />
           </main>
         </div>
