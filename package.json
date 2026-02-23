@@ -1,7 +1,15 @@
 {
   "name": "taiwan-inheritance-calculator",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "台灣民法繼承應繼分與特留分計算工具",
+  "author": "Yen-Ying Lee",
+  "license": "MIT",
+  "homepage": "https://white1033.github.io/taiwan-inheritance-calculator/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/white1033/taiwan-inheritance-calculator.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
