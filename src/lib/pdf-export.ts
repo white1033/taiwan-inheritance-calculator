@@ -133,7 +133,6 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
   if (!vt) return;
 
   // Account for any offset between the element and the viewport container.
-  // The viewport is inside .react-flow which may be nested inside #family-tree.
   const reactFlowEl = element.querySelector('.react-flow') as HTMLElement;
   const elemRect = element.getBoundingClientRect();
   let offsetX = 0;
@@ -145,7 +144,27 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
   }
 
   const edgePaths = element.querySelectorAll('.react-flow__edge-path');
+  if (edgePaths.length === 0) return;
 
+  ctx.save();
+
+  // Create a clipping region that excludes node card areas.
+  // This simulates edges being rendered behind nodes (correct z-order)
+  // by preventing edge strokes from drawing over node rectangles.
+  const nodes = element.querySelectorAll('.react-flow__node');
+  ctx.beginPath();
+  ctx.rect(0, 0, canvas.width, canvas.height);
+  for (const node of Array.from(nodes)) {
+    const nodeRect = (node as HTMLElement).getBoundingClientRect();
+    const x = (nodeRect.left - elemRect.left) * canvasScale;
+    const y = (nodeRect.top - elemRect.top) * canvasScale;
+    const w = nodeRect.width * canvasScale;
+    const h = nodeRect.height * canvasScale;
+    ctx.rect(x, y, w, h);
+  }
+  ctx.clip('evenodd');
+
+  // Draw edges within the clipped region
   for (const pathEl of Array.from(edgePaths)) {
     const d = pathEl.getAttribute('d');
     if (!d) continue;
@@ -161,7 +180,6 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
     ctx.save();
 
-    // Apply: canvasScale × (offset + viewport translate) + viewport scale
     ctx.setTransform(
       canvasScale * vt.scale, 0,
       0, canvasScale * vt.scale,
@@ -183,6 +201,8 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
     ctx.restore();
   }
+
+  ctx.restore();
 }
 
 const CANVAS_SCALE = 2;
