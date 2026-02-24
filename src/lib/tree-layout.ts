@@ -177,21 +177,88 @@ export function buildTreeLayout(
     });
   }
 
-  // Parents above (no parentId)
-  const parentPersons = persons.filter(
-    (p) => (p.relation === '父' || p.relation === '母') && !p.parentId,
+  // Parents and Grandparents (Above)
+  // First, gather all parents and grandparents
+  const fatherNode = persons.find((p) => p.relation === '父' && !p.parentId);
+  const motherNode = persons.find((p) => p.relation === '母' && !p.parentId);
+  const paternalGps = persons.filter(
+    (p) => (p.relation === '祖父' || p.relation === '祖母') && !p.parentId,
+  );
+  const maternalGps = persons.filter(
+    (p) => (p.relation === '外祖父' || p.relation === '外祖母') && !p.parentId,
+  );
+
+  // Calculate width needed for each parent's branch
+  const fatherWidth = Math.max(
+    NODE_WIDTH,
+    paternalGps.length * NODE_WIDTH + Math.max(0, paternalGps.length - 1) * H_GAP
+  );
+  const motherWidth = Math.max(
+    NODE_WIDTH,
+    maternalGps.length * NODE_WIDTH + Math.max(0, maternalGps.length - 1) * H_GAP
   );
   const parentY = -(NODE_HEIGHT + V_GAP);
-  const parentStartX = -((parentPersons.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-  parentPersons.forEach((p, i) => {
-    const x = parentStartX + i * (NODE_WIDTH + H_GAP);
-    addPersonNode(p, x, parentY);
-    edges.push({
-      id: `e-${p.id}-${decedent.id}`,
-      source: p.id,
-      target: decedent.id,
+  const gpY = parentY - NODE_HEIGHT - V_GAP;
+
+  const activeParents = [];
+  if (fatherNode) activeParents.push({ node: fatherNode, width: fatherWidth, gps: paternalGps });
+  if (motherNode) activeParents.push({ node: motherNode, width: motherWidth, gps: maternalGps });
+
+  if (activeParents.length > 0) {
+    const totalParentsWidth =
+      activeParents.reduce((sum, p) => sum + p.width, 0) +
+      Math.max(0, activeParents.length - 1) * H_GAP;
+
+    let currentX = -totalParentsWidth / 2;
+
+    for (const parentGroup of activeParents) {
+      const { node, width, gps } = parentGroup;
+      const parentCx = currentX + width / 2;
+
+      // Place parent
+      addPersonNode(node, parentCx - NODE_WIDTH / 2, parentY);
+      edges.push({
+        id: `e-${node.id}-${decedent.id}`,
+        source: node.id,
+        target: decedent.id,
+      });
+
+      // Place grandparents for this parent
+      if (gps.length > 0) {
+        const gpGroupWidth = gps.length * NODE_WIDTH + Math.max(0, gps.length - 1) * H_GAP;
+        const gpStartX = parentCx - gpGroupWidth / 2;
+        gps.forEach((gp, i) => {
+          const gpX = gpStartX + i * (NODE_WIDTH + H_GAP);
+          addPersonNode(gp, gpX - NODE_WIDTH / 2, gpY);
+          edges.push({
+            id: `e-${gp.id}-${node.id}`,
+            source: gp.id,
+            target: node.id,
+          });
+        });
+      }
+
+      currentX += width + H_GAP;
+    }
+  }
+
+  // Fallback: If grandparents exist but their connecting parent doesn't, center them above decedent
+  const orphanGps = [];
+  if (!fatherNode) orphanGps.push(...paternalGps);
+  if (!motherNode) orphanGps.push(...maternalGps);
+  if (orphanGps.length > 0) {
+    const gpGroupWidth = orphanGps.length * NODE_WIDTH + Math.max(0, orphanGps.length - 1) * H_GAP;
+    let currentX = -gpGroupWidth / 2;
+    orphanGps.forEach((gp) => {
+      addPersonNode(gp, currentX, gpY);
+      edges.push({
+        id: `e-${gp.id}-${decedent.id}`,
+        source: gp.id,
+        target: decedent.id,
+      });
+      currentX += NODE_WIDTH + H_GAP;
     });
-  });
+  }
 
   // Children below (direct children: relation=子女, no parentId)
   const directChildren = persons.filter(
@@ -233,21 +300,6 @@ export function buildTreeLayout(
     });
   });
 
-  // Grandparents above parents (no parentId)
-  const gpPersons = persons.filter((p) =>
-    (['祖父', '祖母', '外祖父', '外祖母'] as string[]).includes(p.relation) && !p.parentId,
-  );
-  const gpY = parentY - NODE_HEIGHT - V_GAP;
-  const gpStartX = -((gpPersons.length - 1) * (NODE_WIDTH + H_GAP)) / 2;
-  gpPersons.forEach((gp, i) => {
-    const x = gpStartX + i * (NODE_WIDTH + H_GAP);
-    addPersonNode(gp, x, gpY);
-    edges.push({
-      id: `e-${gp.id}-${decedent.id}`,
-      source: gp.id,
-      target: decedent.id,
-    });
-  });
 
   return { nodes, edges };
 }
