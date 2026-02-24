@@ -59,6 +59,18 @@ export const PersonNode = memo(function PersonNode({
       className={`bg-white rounded-lg shadow-md border-t-4 ${colorClass} ${ringClass} w-52 cursor-pointer relative group`}
       onClick={() => data.onSelect?.(id)}
       onContextMenu={(e) => { e.preventDefault(); data.onContextMenu?.(id, !!data.isDecedent, e); }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${data.isDecedent ? '被繼承人' : data.relation} ${data.name || '(未命名)'}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          data.onSelect?.(id);
+        } else if ((e.key === 'Delete' || e.key === 'Backspace') && !data.isDecedent) {
+          e.preventDefault();
+          data.onDelete?.(id);
+        }
+      }}
     >
       <Handle type="target" position={Position.Top} className="!bg-slate-400" />
 
@@ -70,6 +82,7 @@ export const PersonNode = memo(function PersonNode({
             data.onDelete?.(id);
           }}
           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-100 text-red-500 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="刪除"
         >
           ×
         </button>
@@ -130,6 +143,7 @@ export const PersonNode = memo(function PersonNode({
             onClick={(e) => { e.stopPropagation(); data.onAddChild?.(id); }}
             className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
             title="新增子女"
+            aria-label="新增子女"
           >
             +子女
           </button>
@@ -139,6 +153,7 @@ export const PersonNode = memo(function PersonNode({
               onClick={(e) => { e.stopPropagation(); data.onAddSpouse?.(id); }}
               className="text-xs px-2 py-0.5 bg-orange-50 text-orange-600 rounded hover:bg-orange-100"
               title="新增配偶"
+              aria-label="新增配偶"
             >
               +配偶
             </button>

@@ -2,15 +2,17 @@ import { useRef } from 'react';
 import { useInheritance } from '../hooks/useInheritance';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { exportToPdf, exportToPng, printPage } from '../lib/pdf-export';
+import { useToast } from '../hooks/useToast';
 
 export function ExportToolbar() {
   const { state, dispatch } = useInheritance();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasErrors = state.validationErrors.length > 0;
 
   function guardedExport(fn: () => void | Promise<void>) {
     if (hasErrors) {
-      alert('請先修正所有驗證錯誤後再匯出');
+      toast('請先修正所有驗證錯誤後再匯出', 'error');
       return;
     }
     fn();
@@ -23,7 +25,7 @@ export function ExportToolbar() {
       const result = await importFromExcel(file);
       dispatch({ type: 'LOAD_PERSONS', payload: result });
     } catch (err) {
-      alert('匯入失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+      toast('匯入失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }
     // Reset file input so same file can be re-imported
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -33,7 +35,7 @@ export function ExportToolbar() {
     try {
       await exportToExcel(state.decedent, state.persons);
     } catch (err) {
-      alert('Excel 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+      toast('Excel 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }
   }
 
@@ -41,7 +43,7 @@ export function ExportToolbar() {
     try {
       await exportToPdf('app-root', '繼承系統表.pdf');
     } catch (err) {
-      alert('PDF 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+      toast('PDF 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }
   }
 
@@ -49,7 +51,7 @@ export function ExportToolbar() {
     try {
       await exportToPng('family-tree', '繼承系統圖.png');
     } catch (err) {
-      alert('圖片匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+      toast('圖片匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }
   }
 

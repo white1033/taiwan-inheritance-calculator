@@ -19,19 +19,34 @@ export type Action =
   | { type: 'ADD_SUB_HEIR'; payload: { parentId: string; relation: Relation } }
   | { type: 'DELETE_PERSON'; payload: { id: string } }
   | { type: 'SELECT_PERSON'; payload: { id: string | null } }
-  | { type: 'LOAD_PERSONS'; payload: { decedent: Decedent; persons: Person[] } };
+  | { type: 'LOAD_PERSONS'; payload: { decedent: Decedent; persons: Person[] } }
+  | { type: 'RESET_STATE' };
+
+const STORAGE_KEY = 'tw-inheritance-calculator-state';
+
+function loadFromStorage(): { decedent: Decedent; persons: Person[] } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { decedent: Decedent; persons: Person[] };
+    if (!parsed.decedent || !Array.isArray(parsed.persons)) return null;
+    return { decedent: parsed.decedent, persons: parsed.persons };
+  } catch {
+    return null;
+  }
+}
+
+function saveToStorage(decedent: Decedent, persons: Person[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decedent, persons }));
+  } catch {
+    // graceful degradation if localStorage unavailable
+  }
+}
 
 function generateId(): string {
   return `p_${crypto.randomUUID()}`;
 }
-
-const initialState: State = {
-  decedent: { id: 'decedent', name: '' },
-  persons: [],
-  results: [],
-  selectedPersonId: null,
-  validationErrors: [],
-};
 
 function computeDerived(decedent: Decedent, persons: Person[]) {
   return {
@@ -40,11 +55,32 @@ function computeDerived(decedent: Decedent, persons: Person[]) {
   };
 }
 
+function buildInitialState(): State {
+  const saved = loadFromStorage();
+  if (saved) {
+    return {
+      decedent: saved.decedent,
+      persons: saved.persons,
+      ...computeDerived(saved.decedent, saved.persons),
+      selectedPersonId: null,
+    };
+  }
+  return {
+    decedent: { id: 'decedent', name: '' },
+    persons: [],
+    results: [],
+    selectedPersonId: null,
+    validationErrors: [],
+  };
+}
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DECEDENT': {
       const decedent = { ...state.decedent, ...action.payload };
-      return { ...state, decedent, ...computeDerived(decedent, state.persons) };
+      const next = { ...state, decedent, ...computeDerived(decedent, state.persons) };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     case 'ADD_PERSON': {
       const newPerson: Person = {
@@ -54,12 +90,14 @@ function reducer(state: State, action: Action): State {
         status: '一般繼承',
       };
       const persons = [...state.persons, newPerson];
-      return {
+      const next = {
         ...state,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     case 'ADD_SUB_HEIR': {
       const parent = state.persons.find(p => p.id === action.payload.parentId);
@@ -79,18 +117,22 @@ function reducer(state: State, action: Action): State {
         parentId: action.payload.parentId,
       };
       const persons = [...state.persons, newPerson];
-      return {
+      const next = {
         ...state,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     case 'UPDATE_PERSON': {
       const persons = state.persons.map(p =>
         p.id === action.payload.id ? { ...p, ...action.payload.updates } : p
       );
-      return { ...state, persons, ...computeDerived(state.decedent, persons) };
+      const next = { ...state, persons, ...computeDerived(state.decedent, persons) };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     case 'DELETE_PERSON': {
       const idsToDelete = new Set<string>();
@@ -104,36 +146,54 @@ function reducer(state: State, action: Action): State {
       }
       collectDescendants(action.payload.id);
       const persons = state.persons.filter(p => !idsToDelete.has(p.id));
-      return {
+      const next = {
         ...state,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId:
           idsToDelete.has(state.selectedPersonId ?? '') ? null : state.selectedPersonId,
       };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     case 'SELECT_PERSON': {
       return { ...state, selectedPersonId: action.payload.id };
     }
     case 'LOAD_PERSONS': {
-      return {
+      const next = {
         ...state,
         decedent: action.payload.decedent,
         persons: action.payload.persons,
         ...computeDerived(action.payload.decedent, action.payload.persons),
         selectedPersonId: null,
       };
+      saveToStorage(next.decedent, next.persons);
+      return next;
+    }
+    case 'RESET_STATE': {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // graceful degradation
+      }
+      return {
+        decedent: { id: 'decedent', name: '' },
+        persons: [],
+        results: [],
+        selectedPersonId: null,
+        validationErrors: [],
+      };
     }
     default:
       return state;
   }
 }
+
 export function InheritanceProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   return (
     <InheritanceContext.Provider value={{ state, dispatch }}>
       {children}
     </InheritanceContext.Provider>
   );
 }
-

@@ -2,6 +2,7 @@ import { useInheritance } from '../hooks/useInheritance';
 import { PersonEditor } from './PersonEditor';
 import type { Relation } from '../types/models';
 import { toString } from '../lib/fraction';
+import { PRESETS } from '../lib/presets';
 
 const HEIR_BUTTONS: { label: string; relation: Relation }[] = [
   { label: '+ 配偶', relation: '配偶' },
@@ -48,6 +49,43 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
           </svg>
         </button>
       </div>
+
+      {/* Presets Selection */}
+      <section className="p-4 border-b border-slate-200">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          範例案例
+        </h2>
+        <select
+          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value=""
+          onChange={(e) => {
+            const presetIndex = parseInt(e.target.value, 10);
+            if (!isNaN(presetIndex) && PRESETS[presetIndex]) {
+              const { decedent, persons } = PRESETS[presetIndex];
+              dispatch({ type: 'LOAD_PERSONS', payload: { decedent, persons } });
+            }
+          }}
+        >
+          <option value="">-- 請選擇範例 --</option>
+          {PRESETS.map((preset, index) => (
+            <option key={index} value={index}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="w-full mt-2 px-3 py-2 text-sm border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+          onClick={() => {
+            if (window.confirm('確定要清除所有資料嗎？')) {
+              dispatch({ type: 'RESET_STATE' });
+            }
+          }}
+        >
+          清除所有資料
+        </button>
+      </section>
+
 
       {/* Decedent Info */}
       <section className="p-4 border-b border-slate-200">
