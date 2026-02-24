@@ -28,7 +28,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
   return (
     <div
       className={[
-        'bg-white flex flex-col overflow-y-auto border-r border-slate-200',
+        'no-print bg-white flex flex-col overflow-y-auto border-r border-slate-200',
         // Tablet+: always visible, fixed width
         'md:relative md:translate-x-0 md:w-64 lg:w-80 2xl:w-96 md:z-auto',
         // Mobile: slide-in drawer

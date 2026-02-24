@@ -20,7 +20,7 @@ function AppContent() {
           <LeftPanel open={panelOpen} onClose={closePanel} />
           {panelOpen && (
             <div
-              className="md:hidden fixed inset-0 bg-black/30 z-30"
+              className="no-print md:hidden fixed inset-0 bg-black/30 z-30"
               onClick={closePanel}
               aria-hidden="true"
             />
