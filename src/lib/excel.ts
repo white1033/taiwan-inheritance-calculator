@@ -32,6 +32,7 @@ function escapeFormulaInjection(value: string): string {
  * Sanitize filename by removing characters invalid on most filesystems.
  */
 function sanitizeFilename(name: string): string {
+  // eslint-disable-next-line no-control-regex -- intentional: strip control chars invalid on most filesystems
   return name.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_');
 }
 

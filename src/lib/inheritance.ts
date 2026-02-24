@@ -21,7 +21,7 @@ export interface CalculationResult {
  * - Children, Parents, Spouse: reserved = 1/2 of statutory share
  * - Siblings, Grandparents: reserved = 1/3 of statutory share
  */
-function reservedRatio(relation: Relation, _activeOrder: number | null): Fraction {
+function reservedRatio(relation: Relation): Fraction {
   const order = getOrder(relation);
 
   // Spouse reserved ratio depends on which order they co-inherit with
@@ -188,7 +188,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
         name: spouse.name,
         relation: spouse.relation,
         inheritanceShare: perSlot,
-        reservedShare: multiply(perSlot, reservedRatio('配偶', activeOrder)),
+        reservedShare: multiply(perSlot, reservedRatio('配偶')),
       });
     }
 
@@ -208,7 +208,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
         name: spouse.name,
         relation: spouse.relation,
         inheritanceShare: spouseShare,
-        reservedShare: multiply(spouseShare, reservedRatio('配偶', activeOrder)),
+        reservedShare: multiply(spouseShare, reservedRatio('配偶')),
       });
     }
 
@@ -227,7 +227,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
         name: spouse.name,
         relation: spouse.relation,
         inheritanceShare: spouseShare,
-        reservedShare: multiply(spouseShare, reservedRatio('配偶', activeOrder)),
+        reservedShare: multiply(spouseShare, reservedRatio('配偶')),
       });
     }
   } else if (activeOrder !== null) {
@@ -288,7 +288,7 @@ function processSlotHolder(
       name: holder.name,
       relation: holder.relation,
       inheritanceShare: slotShare,
-      reservedShare: multiply(slotShare, reservedRatio(holder.relation, activeOrder)),
+      reservedShare: multiply(slotShare, reservedRatio(holder.relation)),
     });
   } else if (holder.status === '死亡' || holder.status === '死亡絕嗣') {
     // Dead heir: check for representation heirs
@@ -323,7 +323,7 @@ function processSlotHolder(
             name: rep.name,
             relation: rep.relation,
             inheritanceShare: perRep,
-            reservedShare: multiply(perRep, reservedRatio(rep.relation, activeOrder)),
+            reservedShare: multiply(perRep, reservedRatio(rep.relation)),
           });
         }
       }
@@ -370,7 +370,7 @@ function processSlotHolder(
             name: sub.name,
             relation: sub.relation,
             inheritanceShare: perSub,
-            reservedShare: multiply(perSub, reservedRatio(sub.relation, activeOrder)),
+            reservedShare: multiply(perSub, reservedRatio(sub.relation)),
           });
         }
       }

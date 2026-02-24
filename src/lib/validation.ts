@@ -6,7 +6,7 @@ export interface ValidationError {
   message: string;
 }
 
-export function validate(persons: Person[], _decedent: Decedent): ValidationError[] {
+export function validate(persons: Person[], _decedent?: Decedent): ValidationError[] {
   const errors: ValidationError[] = [];
   const personIds = new Set(persons.map(p => p.id));
   const personMap = new Map(persons.map(p => [p.id, p]));
