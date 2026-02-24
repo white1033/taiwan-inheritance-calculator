@@ -1,19 +1,11 @@
 /**
- * html2canvas cannot parse oklch() colours used by Tailwind CSS v4.
- * Modern browsers may also return oklch() from getComputedStyle().
+ * html2canvas cannot parse oklch() colours used by Tailwind CSS v4,
+ * and has limited SVG rendering (ReactFlow edges are lost).
  *
- * Fix strategy (inside onclone):
- *
- *  Phase 1 — Patch stylesheets:
- *    Read all CSS rules from the ORIGINAL document.styleSheets, replace
- *    oklch() with 'transparent', inject as <style> into the clone, and
- *    remove original <style>/<link> elements.
- *
- *  Phase 2 — Inline colours as rgb/hex:
- *    Read computed styles from the original DOM and convert any oklch()
- *    values to hex via Canvas 2D fillStyle before setting them as
- *    inline styles on the cloned elements. Handles both HTML colour
- *    properties and SVG stroke/fill.
+ * Strategy:
+ *  1. patchClone — fix oklch() in stylesheets and inline styles
+ *  2. drawEdgesOnCanvas — after html2canvas renders, manually draw
+ *     ReactFlow edge paths onto the canvas via Canvas 2D API
  */
 
 // Shared canvas context for oklch → hex conversion
@@ -35,8 +27,6 @@ const HTML_COLOR_PROPS = [
   'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
   'outline-color', 'text-decoration-color', 'box-shadow',
 ] as const;
-
-const SVG_COLOR_PROPS = ['stroke', 'fill', 'stop-color', 'flood-color'] as const;
 
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
@@ -81,54 +71,96 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
     const cloneEl = cloneEls[i] as HTMLElement | SVGElement;
     const computed = getComputedStyle(origEl);
 
-    // HTML colour properties
     for (const prop of HTML_COLOR_PROPS) {
       const value = computed.getPropertyValue(prop);
       if (value) {
         cloneEl.style.setProperty(prop, resolveOklch(value));
       }
     }
-
-    // SVG colour properties (stroke, fill, etc.)
-    if (origEl instanceof SVGElement) {
-      for (const prop of SVG_COLOR_PROPS) {
-        const value = computed.getPropertyValue(prop);
-        if (value && value !== 'none') {
-          cloneEl.style.setProperty(prop, resolveOklch(value));
-        }
-      }
-    }
-  }
-
-  // --- Phase 3: Ensure ReactFlow edge paths have visible strokes ---
-  // ReactFlow edges may lose their stroke colour after Phase 1 replaces
-  // oklch with transparent. Walk edge paths in the clone and set stroke
-  // from the original DOM's computed values.
-  const origEdgePaths = document.querySelectorAll('.react-flow__edge-path');
-  const cloneEdgePaths = clonedDoc.querySelectorAll('.react-flow__edge-path');
-  for (let i = 0; i < origEdgePaths.length && i < cloneEdgePaths.length; i++) {
-    const computed = getComputedStyle(origEdgePaths[i]);
-    const stroke = computed.getPropertyValue('stroke');
-    const clonePath = cloneEdgePaths[i] as SVGElement;
-    if (stroke) {
-      clonePath.style.setProperty('stroke', resolveOklch(stroke));
-    }
-    // Preserve stroke-width and stroke-dasharray
-    const sw = computed.getPropertyValue('stroke-width');
-    if (sw) clonePath.style.setProperty('stroke-width', sw);
-    const sd = computed.getPropertyValue('stroke-dasharray');
-    if (sd && sd !== 'none') clonePath.style.setProperty('stroke-dasharray', sd);
   }
 }
 
+/**
+ * Draw ReactFlow edge paths directly onto the canvas.
+ * html2canvas has poor SVG support and consistently fails to render
+ * ReactFlow's SVG edge paths. We bypass this by reading the path data
+ * and computed styles from the original DOM, then drawing them using
+ * the Canvas 2D API with the correct viewport transform.
+ */
+function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, scale: number) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Get the ReactFlow viewport transform
+  const viewport = element.querySelector('.react-flow__viewport') as HTMLElement;
+  if (!viewport) return;
+
+  const transform = viewport.style.transform;
+  const match = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/);
+  if (!match) return;
+
+  const tx = parseFloat(match[1]);
+  const ty = parseFloat(match[2]);
+  const vScale = parseFloat(match[3]);
+
+  // Get all edge paths from the original DOM
+  const edgePaths = element.querySelectorAll('.react-flow__edge-path');
+
+  for (const pathEl of Array.from(edgePaths)) {
+    const d = pathEl.getAttribute('d');
+    if (!d) continue;
+
+    const computed = getComputedStyle(pathEl);
+    let stroke = computed.getPropertyValue('stroke');
+    stroke = resolveOklch(stroke) || '#b1b1b7';
+    // Fallback: if stroke resolved to empty or transparent, use default grey
+    if (!stroke || stroke === 'transparent' || stroke === 'rgba(0, 0, 0, 0)') {
+      stroke = '#b1b1b7';
+    }
+    const strokeWidth = parseFloat(computed.getPropertyValue('stroke-width')) || 1;
+    const dashArray = computed.getPropertyValue('stroke-dasharray');
+
+    ctx.save();
+
+    // Apply: canvas scale × viewport transform
+    ctx.setTransform(
+      scale * vScale, 0,
+      0, scale * vScale,
+      scale * tx, scale * ty,
+    );
+
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (dashArray && dashArray !== 'none') {
+      const dashes = dashArray.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      if (dashes.length > 0) ctx.setLineDash(dashes);
+    }
+
+    const path2d = new Path2D(d);
+    ctx.stroke(path2d);
+
+    ctx.restore();
+  }
+}
+
+const CANVAS_SCALE = 2;
+
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
-  return html2canvas(element, {
-    scale: 2,
+  const canvas = await html2canvas(element, {
+    scale: CANVAS_SCALE,
     useCORS: true,
     logging: false,
     onclone: patchClone,
   });
+
+  // html2canvas can't render ReactFlow SVG edges — draw them manually
+  drawEdgesOnCanvas(canvas, element, CANVAS_SCALE);
+
+  return canvas;
 }
 
 export async function exportToPdf(elementId: string, filename: string) {
