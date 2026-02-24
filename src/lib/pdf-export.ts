@@ -189,32 +189,17 @@ const CANVAS_SCALE = 2;
 
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
-
-  // Render nodes (html2canvas handles HTML but not SVG edges)
-  const nodeCanvas = await html2canvas(element, {
+  const canvas = await html2canvas(element, {
     scale: CANVAS_SCALE,
     useCORS: true,
     logging: false,
     onclone: patchClone,
   });
 
-  // Create final canvas: edges behind, then nodes on top
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = nodeCanvas.width;
-  finalCanvas.height = nodeCanvas.height;
-  const ctx = finalCanvas.getContext('2d')!;
+  // html2canvas can't render ReactFlow SVG edges — draw them on top
+  drawEdgesOnCanvas(canvas, element, CANVAS_SCALE);
 
-  // 1. Fill with white background (so edges aren't on transparent)
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-  // 2. Draw edges (behind nodes)
-  drawEdgesOnCanvas(finalCanvas, element, CANVAS_SCALE);
-
-  // 3. Draw node canvas on top
-  ctx.drawImage(nodeCanvas, 0, 0);
-
-  return finalCanvas;
+  return canvas;
 }
 
 export async function exportToPdf(elementId: string, filename: string) {
