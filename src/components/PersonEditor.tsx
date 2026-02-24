@@ -1,4 +1,4 @@
-import { useInheritance } from '../context/InheritanceContext';
+import { useInheritance } from '../hooks/useInheritance';
 import { INHERITANCE_STATUS_OPTIONS, RELATION_OPTIONS } from '../types/models';
 import type { Person } from '../types/models';
 

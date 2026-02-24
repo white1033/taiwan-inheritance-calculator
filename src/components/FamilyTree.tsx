@@ -6,7 +6,7 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useInheritance } from '../context/InheritanceContext.tsx';
+import { useInheritance } from '../hooks/useInheritance.ts';
 import { PersonNode } from './PersonNode.tsx';
 import { buildTreeLayout } from '../lib/tree-layout.ts';
 import { NodeContextMenu } from './NodeContextMenu.tsx';

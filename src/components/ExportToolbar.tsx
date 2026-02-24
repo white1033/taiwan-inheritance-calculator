@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useInheritance } from '../context/InheritanceContext';
+import { useInheritance } from '../hooks/useInheritance';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { exportToPdf, exportToPng, printPage } from '../lib/pdf-export';
 

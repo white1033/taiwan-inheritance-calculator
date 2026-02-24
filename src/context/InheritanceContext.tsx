@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react';
+import { useReducer, type ReactNode } from 'react';
+import { InheritanceContext } from './InheritanceContextValue';
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
 import { validate, type ValidationError } from '../lib/validation';
@@ -127,12 +128,6 @@ function reducer(state: State, action: Action): State {
       return state;
   }
 }
-
-const InheritanceContext = createContext<{
-  state: State;
-  dispatch: React.Dispatch<Action>;
-} | null>(null);
-
 export function InheritanceProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   return (
@@ -142,8 +137,3 @@ export function InheritanceProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useInheritance() {
-  const context = useContext(InheritanceContext);
-  if (!context) throw new Error('useInheritance must be used within InheritanceProvider');
-  return context;
-}

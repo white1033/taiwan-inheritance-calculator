@@ -1,4 +1,4 @@
-import { useInheritance } from '../context/InheritanceContext';
+import { useInheritance } from '../hooks/useInheritance';
 import { PersonEditor } from './PersonEditor';
 import type { Relation } from '../types/models';
 import { toString } from '../lib/fraction';
