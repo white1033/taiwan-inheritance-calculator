@@ -1,8 +1,12 @@
 import { useReducer, type ReactNode } from 'react';
-import { InheritanceContext } from './InheritanceContextValue';
+import { InheritanceStateContext, InheritanceDispatchContext } from './InheritanceContextValue';
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
 import { validate, type ValidationError } from '../lib/validation';
+
+type Snapshot = { decedent: Decedent; persons: Person[] };
+
+const MAX_UNDO = 50;
 
 export interface State {
   decedent: Decedent;
@@ -10,6 +14,8 @@ export interface State {
   results: CalculationResult[];
   selectedPersonId: string | null;
   validationErrors: ValidationError[];
+  past: Snapshot[];
+  future: Snapshot[];
 }
 
 export type Action =
@@ -20,15 +26,17 @@ export type Action =
   | { type: 'DELETE_PERSON'; payload: { id: string } }
   | { type: 'SELECT_PERSON'; payload: { id: string | null } }
   | { type: 'LOAD_PERSONS'; payload: { decedent: Decedent; persons: Person[] } }
-  | { type: 'RESET_STATE' };
+  | { type: 'RESET_STATE' }
+  | { type: 'UNDO' }
+  | { type: 'REDO' };
 
 const STORAGE_KEY = 'tw-inheritance-calculator-state';
 
-function loadFromStorage(): { decedent: Decedent; persons: Person[] } | null {
+function loadFromStorage(): Snapshot | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { decedent: Decedent; persons: Person[] };
+    const parsed = JSON.parse(raw) as Snapshot;
     if (!parsed.decedent || !Array.isArray(parsed.persons)) return null;
     return { decedent: parsed.decedent, persons: parsed.persons };
   } catch {
@@ -55,6 +63,16 @@ function computeDerived(decedent: Decedent, persons: Person[]) {
   };
 }
 
+const EMPTY_STATE: State = {
+  decedent: { id: 'decedent', name: '' },
+  persons: [],
+  results: [],
+  selectedPersonId: null,
+  validationErrors: [],
+  past: [],
+  future: [],
+};
+
 function buildInitialState(): State {
   const saved = loadFromStorage();
   if (saved) {
@@ -63,26 +81,32 @@ function buildInitialState(): State {
       persons: saved.persons,
       ...computeDerived(saved.decedent, saved.persons),
       selectedPersonId: null,
+      past: [],
+      future: [],
     };
   }
+  return { ...EMPTY_STATE };
+}
+
+function pushUndo(state: State): { past: Snapshot[]; future: Snapshot[] } {
+  const snapshot: Snapshot = { decedent: state.decedent, persons: state.persons };
   return {
-    decedent: { id: 'decedent', name: '' },
-    persons: [],
-    results: [],
-    selectedPersonId: null,
-    validationErrors: [],
+    past: [...state.past.slice(-(MAX_UNDO - 1)), snapshot],
+    future: [],
   };
 }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DECEDENT': {
+      const history = pushUndo(state);
       const decedent = { ...state.decedent, ...action.payload };
-      const next = { ...state, decedent, ...computeDerived(decedent, state.persons) };
+      const next = { ...state, ...history, decedent, ...computeDerived(decedent, state.persons) };
       saveToStorage(next.decedent, next.persons);
       return next;
     }
     case 'ADD_PERSON': {
+      const history = pushUndo(state);
       const newPerson: Person = {
         id: generateId(),
         name: '',
@@ -92,6 +116,7 @@ function reducer(state: State, action: Action): State {
       const persons = [...state.persons, newPerson];
       const next = {
         ...state,
+        ...history,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
@@ -100,6 +125,7 @@ function reducer(state: State, action: Action): State {
       return next;
     }
     case 'ADD_SUB_HEIR': {
+      const history = pushUndo(state);
       const parent = state.persons.find(p => p.id === action.payload.parentId);
       let status: Person['status'] = '一般繼承';
       if (parent) {
@@ -119,6 +145,7 @@ function reducer(state: State, action: Action): State {
       const persons = [...state.persons, newPerson];
       const next = {
         ...state,
+        ...history,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
@@ -127,14 +154,16 @@ function reducer(state: State, action: Action): State {
       return next;
     }
     case 'UPDATE_PERSON': {
+      const history = pushUndo(state);
       const persons = state.persons.map(p =>
         p.id === action.payload.id ? { ...p, ...action.payload.updates } : p
       );
-      const next = { ...state, persons, ...computeDerived(state.decedent, persons) };
+      const next = { ...state, ...history, persons, ...computeDerived(state.decedent, persons) };
       saveToStorage(next.decedent, next.persons);
       return next;
     }
     case 'DELETE_PERSON': {
+      const history = pushUndo(state);
       const idsToDelete = new Set<string>();
       function collectDescendants(id: string) {
         idsToDelete.add(id);
@@ -148,6 +177,7 @@ function reducer(state: State, action: Action): State {
       const persons = state.persons.filter(p => !idsToDelete.has(p.id));
       const next = {
         ...state,
+        ...history,
         persons,
         ...computeDerived(state.decedent, persons),
         selectedPersonId:
@@ -160,8 +190,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, selectedPersonId: action.payload.id };
     }
     case 'LOAD_PERSONS': {
+      const history = pushUndo(state);
       const next = {
         ...state,
+        ...history,
         decedent: action.payload.decedent,
         persons: action.payload.persons,
         ...computeDerived(action.payload.decedent, action.payload.persons),
@@ -176,13 +208,39 @@ function reducer(state: State, action: Action): State {
       } catch {
         // graceful degradation
       }
-      return {
-        decedent: { id: 'decedent', name: '' },
-        persons: [],
-        results: [],
+      return { ...EMPTY_STATE };
+    }
+    case 'UNDO': {
+      if (state.past.length === 0) return state;
+      const previous = state.past[state.past.length - 1];
+      const currentSnapshot: Snapshot = { decedent: state.decedent, persons: state.persons };
+      const next = {
+        ...state,
+        past: state.past.slice(0, -1),
+        future: [...state.future, currentSnapshot],
+        decedent: previous.decedent,
+        persons: previous.persons,
+        ...computeDerived(previous.decedent, previous.persons),
         selectedPersonId: null,
-        validationErrors: [],
       };
+      saveToStorage(next.decedent, next.persons);
+      return next;
+    }
+    case 'REDO': {
+      if (state.future.length === 0) return state;
+      const next_snapshot = state.future[state.future.length - 1];
+      const currentSnapshot: Snapshot = { decedent: state.decedent, persons: state.persons };
+      const next = {
+        ...state,
+        past: [...state.past, currentSnapshot],
+        future: state.future.slice(0, -1),
+        decedent: next_snapshot.decedent,
+        persons: next_snapshot.persons,
+        ...computeDerived(next_snapshot.decedent, next_snapshot.persons),
+        selectedPersonId: null,
+      };
+      saveToStorage(next.decedent, next.persons);
+      return next;
     }
     default:
       return state;
@@ -192,8 +250,10 @@ function reducer(state: State, action: Action): State {
 export function InheritanceProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   return (
-    <InheritanceContext.Provider value={{ state, dispatch }}>
-      {children}
-    </InheritanceContext.Provider>
+    <InheritanceStateContext.Provider value={state}>
+      <InheritanceDispatchContext.Provider value={dispatch}>
+        {children}
+      </InheritanceDispatchContext.Provider>
+    </InheritanceStateContext.Provider>
   );
 }
