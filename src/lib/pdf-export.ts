@@ -12,7 +12,8 @@
  *  Phase 2 — Inline colours as rgb/hex:
  *    Read computed styles from the original DOM and convert any oklch()
  *    values to hex via Canvas 2D fillStyle before setting them as
- *    inline styles on the cloned elements.
+ *    inline styles on the cloned elements. Handles both HTML colour
+ *    properties and SVG stroke/fill.
  */
 
 // Shared canvas context for oklch → hex conversion
@@ -28,6 +29,14 @@ function resolveOklch(value: string): string {
     return _ctx.fillStyle;
   });
 }
+
+const HTML_COLOR_PROPS = [
+  'color', 'background-color', 'border-color',
+  'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+  'outline-color', 'text-decoration-color', 'box-shadow',
+] as const;
+
+const SVG_COLOR_PROPS = ['stroke', 'fill', 'stop-color', 'flood-color'] as const;
 
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
@@ -61,26 +70,54 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   clonedDoc.head.appendChild(styleEl);
 
   // --- Phase 2: Inline computed colours (oklch → hex via canvas) ---
-  const COLOR_PROPS = [
-    'color', 'background-color', 'border-color',
-    'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-    'outline-color', 'text-decoration-color', 'box-shadow',
-  ] as const;
-
   const origRoot = document.getElementById(clone.id);
   if (!origRoot) return;
 
-  const origEls = [origRoot, ...origRoot.querySelectorAll<HTMLElement>('*')];
-  const cloneEls = [clone, ...clone.querySelectorAll<HTMLElement>('*')];
+  const origEls = origRoot.querySelectorAll('*');
+  const cloneEls = clone.querySelectorAll('*');
 
   for (let i = 0; i < origEls.length && i < cloneEls.length; i++) {
-    const computed = getComputedStyle(origEls[i]);
-    for (const prop of COLOR_PROPS) {
+    const origEl = origEls[i] as Element;
+    const cloneEl = cloneEls[i] as HTMLElement | SVGElement;
+    const computed = getComputedStyle(origEl);
+
+    // HTML colour properties
+    for (const prop of HTML_COLOR_PROPS) {
       const value = computed.getPropertyValue(prop);
       if (value) {
-        cloneEls[i].style.setProperty(prop, resolveOklch(value));
+        cloneEl.style.setProperty(prop, resolveOklch(value));
       }
     }
+
+    // SVG colour properties (stroke, fill, etc.)
+    if (origEl instanceof SVGElement) {
+      for (const prop of SVG_COLOR_PROPS) {
+        const value = computed.getPropertyValue(prop);
+        if (value && value !== 'none') {
+          cloneEl.style.setProperty(prop, resolveOklch(value));
+        }
+      }
+    }
+  }
+
+  // --- Phase 3: Ensure ReactFlow edge paths have visible strokes ---
+  // ReactFlow edges may lose their stroke colour after Phase 1 replaces
+  // oklch with transparent. Walk edge paths in the clone and set stroke
+  // from the original DOM's computed values.
+  const origEdgePaths = document.querySelectorAll('.react-flow__edge-path');
+  const cloneEdgePaths = clonedDoc.querySelectorAll('.react-flow__edge-path');
+  for (let i = 0; i < origEdgePaths.length && i < cloneEdgePaths.length; i++) {
+    const computed = getComputedStyle(origEdgePaths[i]);
+    const stroke = computed.getPropertyValue('stroke');
+    const clonePath = cloneEdgePaths[i] as SVGElement;
+    if (stroke) {
+      clonePath.style.setProperty('stroke', resolveOklch(stroke));
+    }
+    // Preserve stroke-width and stroke-dasharray
+    const sw = computed.getPropertyValue('stroke-width');
+    if (sw) clonePath.style.setProperty('stroke-width', sw);
+    const sd = computed.getPropertyValue('stroke-dasharray');
+    if (sd && sd !== 'none') clonePath.style.setProperty('stroke-dasharray', sd);
   }
 }
 
