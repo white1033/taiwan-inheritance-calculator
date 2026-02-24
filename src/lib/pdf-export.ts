@@ -4,9 +4,9 @@
  *
  * Strategy:
  *  1. patchClone — fix oklch() in stylesheets and inline styles
- *  2. drawEdgesOnCanvas — after html2canvas renders, manually draw
- *     ReactFlow edge paths onto the canvas via Canvas 2D API
- *  3. Composite edges BEHIND nodes for correct z-order
+ *  2. drawEdgesOnCanvas — draw edge paths via Canvas 2D API
+ *  3. Composite: html2canvas result → edges → re-stamp node cards
+ *     This gives correct z-order: background → edges → nodes
  */
 
 // Shared canvas context for oklch → hex conversion
@@ -83,13 +83,11 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
 
 /**
  * Parse the viewport transform to get translate and scale values.
- * Handles both `translate(x, y) scale(z)` and `matrix(a,b,c,d,e,f)` formats.
+ * Handles both `matrix(a,b,c,d,e,f)` and inline translate/translate3d formats.
  */
 function parseViewportTransform(viewport: HTMLElement): { tx: number; ty: number; scale: number } | null {
-  // First try the computed transform (returns matrix form)
   const computed = getComputedStyle(viewport).transform;
   if (computed && computed !== 'none') {
-    // matrix(a, b, c, d, e, f) — for translate+scale: a=scaleX, d=scaleY, e=tx, f=ty
     const matrixMatch = computed.match(/matrix\(([^)]+)\)/);
     if (matrixMatch) {
       const values = matrixMatch[1].split(',').map(v => parseFloat(v.trim()));
@@ -99,14 +97,11 @@ function parseViewportTransform(viewport: HTMLElement): { tx: number; ty: number
     }
   }
 
-  // Fallback: parse inline style (translate / translate3d)
   const inlineTransform = viewport.style.transform;
-  // translate3d(Xpx, Ypx, 0px) scale(Z)
   const match3d = inlineTransform.match(/translate3d\(([-\d.]+)px,\s*([-\d.]+)px,\s*[-\d.]+px\)\s*scale\(([-\d.]+)\)/);
   if (match3d) {
     return { tx: parseFloat(match3d[1]), ty: parseFloat(match3d[2]), scale: parseFloat(match3d[3]) };
   }
-  // translate(Xpx, Ypx) scale(Z)
   const match2d = inlineTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/);
   if (match2d) {
     return { tx: parseFloat(match2d[1]), ty: parseFloat(match2d[2]), scale: parseFloat(match2d[3]) };
@@ -117,10 +112,6 @@ function parseViewportTransform(viewport: HTMLElement): { tx: number; ty: number
 
 /**
  * Draw ReactFlow edge paths directly onto the canvas.
- * html2canvas has poor SVG support and consistently fails to render
- * ReactFlow's SVG edge paths. We bypass this by reading the path data
- * and computed styles from the original DOM, then drawing them using
- * the Canvas 2D API with the correct viewport transform.
  */
 function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canvasScale: number) {
   const ctx = canvas.getContext('2d');
@@ -132,7 +123,7 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
   const vt = parseViewportTransform(viewport);
   if (!vt) return;
 
-  // Account for any offset between the element and the viewport container.
+  // Account for any offset between the element and the ReactFlow container
   const reactFlowEl = element.querySelector('.react-flow') as HTMLElement;
   const elemRect = element.getBoundingClientRect();
   let offsetX = 0;
@@ -144,27 +135,7 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
   }
 
   const edgePaths = element.querySelectorAll('.react-flow__edge-path');
-  if (edgePaths.length === 0) return;
 
-  ctx.save();
-
-  // Create a clipping region that excludes node card areas.
-  // This simulates edges being rendered behind nodes (correct z-order)
-  // by preventing edge strokes from drawing over node rectangles.
-  const nodes = element.querySelectorAll('.react-flow__node');
-  ctx.beginPath();
-  ctx.rect(0, 0, canvas.width, canvas.height);
-  for (const node of Array.from(nodes)) {
-    const nodeRect = (node as HTMLElement).getBoundingClientRect();
-    const x = (nodeRect.left - elemRect.left) * canvasScale;
-    const y = (nodeRect.top - elemRect.top) * canvasScale;
-    const w = nodeRect.width * canvasScale;
-    const h = nodeRect.height * canvasScale;
-    ctx.rect(x, y, w, h);
-  }
-  ctx.clip('evenodd');
-
-  // Draw edges within the clipped region
   for (const pathEl of Array.from(edgePaths)) {
     const d = pathEl.getAttribute('d');
     if (!d) continue;
@@ -201,25 +172,48 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
     ctx.restore();
   }
-
-  ctx.restore();
 }
 
 const CANVAS_SCALE = 2;
 
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
-  const canvas = await html2canvas(element, {
+
+  // html2canvas renders background + nodes (but not SVG edges)
+  const baseCanvas = await html2canvas(element, {
     scale: CANVAS_SCALE,
     useCORS: true,
     logging: false,
     onclone: patchClone,
   });
 
-  // html2canvas can't render ReactFlow SVG edges — draw them on top
-  drawEdgesOnCanvas(canvas, element, CANVAS_SCALE);
+  // Composite with correct z-order: background → edges → nodes
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = baseCanvas.width;
+  finalCanvas.height = baseCanvas.height;
+  const ctx = finalCanvas.getContext('2d')!;
 
-  return canvas;
+  // Step 1: Draw html2canvas result (background + nodes)
+  ctx.drawImage(baseCanvas, 0, 0);
+
+  // Step 2: Draw edges on top
+  drawEdgesOnCanvas(finalCanvas, element, CANVAS_SCALE);
+
+  // Step 3: Re-stamp node card regions from the original render on top
+  // of the edges, so nodes cover edges — matching the browser z-order.
+  const elemRect = element.getBoundingClientRect();
+  const nodes = element.querySelectorAll('.react-flow__node');
+  for (const node of Array.from(nodes)) {
+    const r = (node as HTMLElement).getBoundingClientRect();
+    const sx = (r.left - elemRect.left) * CANVAS_SCALE;
+    const sy = (r.top - elemRect.top) * CANVAS_SCALE;
+    const sw = r.width * CANVAS_SCALE;
+    const sh = r.height * CANVAS_SCALE;
+    // Copy the node rectangle from baseCanvas and paste on top of edges
+    ctx.drawImage(baseCanvas, sx, sy, sw, sh, sx, sy, sw, sh);
+  }
+
+  return finalCanvas;
 }
 
 export async function exportToPdf(elementId: string, filename: string) {
