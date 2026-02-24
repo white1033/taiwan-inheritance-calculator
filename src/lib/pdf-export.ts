@@ -6,6 +6,7 @@
  *  1. patchClone — fix oklch() in stylesheets and inline styles
  *  2. drawEdgesOnCanvas — after html2canvas renders, manually draw
  *     ReactFlow edge paths onto the canvas via Canvas 2D API
+ *  3. Composite edges BEHIND nodes for correct z-order
  */
 
 // Shared canvas context for oklch → hex conversion
@@ -81,29 +82,68 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
 }
 
 /**
+ * Parse the viewport transform to get translate and scale values.
+ * Handles both `translate(x, y) scale(z)` and `matrix(a,b,c,d,e,f)` formats.
+ */
+function parseViewportTransform(viewport: HTMLElement): { tx: number; ty: number; scale: number } | null {
+  // First try the computed transform (returns matrix form)
+  const computed = getComputedStyle(viewport).transform;
+  if (computed && computed !== 'none') {
+    // matrix(a, b, c, d, e, f) — for translate+scale: a=scaleX, d=scaleY, e=tx, f=ty
+    const matrixMatch = computed.match(/matrix\(([^)]+)\)/);
+    if (matrixMatch) {
+      const values = matrixMatch[1].split(',').map(v => parseFloat(v.trim()));
+      if (values.length === 6) {
+        return { tx: values[4], ty: values[5], scale: values[0] };
+      }
+    }
+  }
+
+  // Fallback: parse inline style (translate / translate3d)
+  const inlineTransform = viewport.style.transform;
+  // translate3d(Xpx, Ypx, 0px) scale(Z)
+  const match3d = inlineTransform.match(/translate3d\(([-\d.]+)px,\s*([-\d.]+)px,\s*[-\d.]+px\)\s*scale\(([-\d.]+)\)/);
+  if (match3d) {
+    return { tx: parseFloat(match3d[1]), ty: parseFloat(match3d[2]), scale: parseFloat(match3d[3]) };
+  }
+  // translate(Xpx, Ypx) scale(Z)
+  const match2d = inlineTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/);
+  if (match2d) {
+    return { tx: parseFloat(match2d[1]), ty: parseFloat(match2d[2]), scale: parseFloat(match2d[3]) };
+  }
+
+  return null;
+}
+
+/**
  * Draw ReactFlow edge paths directly onto the canvas.
  * html2canvas has poor SVG support and consistently fails to render
  * ReactFlow's SVG edge paths. We bypass this by reading the path data
  * and computed styles from the original DOM, then drawing them using
  * the Canvas 2D API with the correct viewport transform.
  */
-function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, scale: number) {
+function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canvasScale: number) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Get the ReactFlow viewport transform
   const viewport = element.querySelector('.react-flow__viewport') as HTMLElement;
   if (!viewport) return;
 
-  const transform = viewport.style.transform;
-  const match = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/);
-  if (!match) return;
+  const vt = parseViewportTransform(viewport);
+  if (!vt) return;
 
-  const tx = parseFloat(match[1]);
-  const ty = parseFloat(match[2]);
-  const vScale = parseFloat(match[3]);
+  // Account for any offset between the element and the viewport container.
+  // The viewport is inside .react-flow which may be nested inside #family-tree.
+  const reactFlowEl = element.querySelector('.react-flow') as HTMLElement;
+  const elemRect = element.getBoundingClientRect();
+  let offsetX = 0;
+  let offsetY = 0;
+  if (reactFlowEl) {
+    const rfRect = reactFlowEl.getBoundingClientRect();
+    offsetX = rfRect.left - elemRect.left;
+    offsetY = rfRect.top - elemRect.top;
+  }
 
-  // Get all edge paths from the original DOM
   const edgePaths = element.querySelectorAll('.react-flow__edge-path');
 
   for (const pathEl of Array.from(edgePaths)) {
@@ -113,7 +153,6 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, scal
     const computed = getComputedStyle(pathEl);
     let stroke = computed.getPropertyValue('stroke');
     stroke = resolveOklch(stroke) || '#b1b1b7';
-    // Fallback: if stroke resolved to empty or transparent, use default grey
     if (!stroke || stroke === 'transparent' || stroke === 'rgba(0, 0, 0, 0)') {
       stroke = '#b1b1b7';
     }
@@ -122,11 +161,11 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, scal
 
     ctx.save();
 
-    // Apply: canvas scale × viewport transform
+    // Apply: canvasScale × (offset + viewport translate) + viewport scale
     ctx.setTransform(
-      scale * vScale, 0,
-      0, scale * vScale,
-      scale * tx, scale * ty,
+      canvasScale * vt.scale, 0,
+      0, canvasScale * vt.scale,
+      canvasScale * (offsetX + vt.tx), canvasScale * (offsetY + vt.ty),
     );
 
     ctx.strokeStyle = stroke;
@@ -150,17 +189,32 @@ const CANVAS_SCALE = 2;
 
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
-  const canvas = await html2canvas(element, {
+
+  // Render nodes (html2canvas handles HTML but not SVG edges)
+  const nodeCanvas = await html2canvas(element, {
     scale: CANVAS_SCALE,
     useCORS: true,
     logging: false,
     onclone: patchClone,
   });
 
-  // html2canvas can't render ReactFlow SVG edges — draw them manually
-  drawEdgesOnCanvas(canvas, element, CANVAS_SCALE);
+  // Create final canvas: edges behind, then nodes on top
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = nodeCanvas.width;
+  finalCanvas.height = nodeCanvas.height;
+  const ctx = finalCanvas.getContext('2d')!;
 
-  return canvas;
+  // 1. Fill with white background (so edges aren't on transparent)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+  // 2. Draw edges (behind nodes)
+  drawEdgesOnCanvas(finalCanvas, element, CANVAS_SCALE);
+
+  // 3. Draw node canvas on top
+  ctx.drawImage(nodeCanvas, 0, 0);
+
+  return finalCanvas;
 }
 
 export async function exportToPdf(elementId: string, filename: string) {
