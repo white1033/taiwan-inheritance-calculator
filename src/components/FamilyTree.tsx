@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
+  useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -14,6 +15,16 @@ import { NodeContextMenu } from './NodeContextMenu.tsx';
 const nodeTypes: NodeTypes = {
   person: PersonNode,
 };
+
+function PrintFitView() {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const handler = () => fitView({ padding: 0.2 });
+    window.addEventListener('beforeprint', handler);
+    return () => window.removeEventListener('beforeprint', handler);
+  }, [fitView]);
+  return null;
+}
 
 export function FamilyTree() {
   const { state, dispatch } = useInheritance();
@@ -120,7 +131,8 @@ export function FamilyTree() {
         proOptions={{ hideAttribution: true }}
       >
         <Background />
-        <Controls />
+        <Controls className="no-print" />
+        <PrintFitView />
       </ReactFlow>
       {showMobileHint && (
         <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">

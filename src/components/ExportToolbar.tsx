@@ -41,7 +41,7 @@ export function ExportToolbar() {
 
   async function handlePdfExport() {
     try {
-      await exportToPdf('app-root', '繼承系統表.pdf');
+      await exportToPdf('family-tree', '繼承系統表.pdf');
     } catch (err) {
       toast('PDF 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }

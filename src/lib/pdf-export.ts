@@ -1,9 +1,25 @@
 import { toCanvas } from 'html-to-image';
 
+const EXCLUDE_CLASSES = [
+  'react-flow__controls',
+  'react-flow__background',
+  'react-flow__minimap',
+];
+
+function shouldInclude(node: Node): boolean {
+  if (node instanceof HTMLElement) {
+    for (const cls of EXCLUDE_CLASSES) {
+      if (node.classList.contains(cls)) return false;
+    }
+  }
+  return true;
+}
+
 async function captureElement(element: HTMLElement) {
   return toCanvas(element, {
     pixelRatio: 2,
     cacheBust: true,
+    filter: shouldInclude,
   });
 }
 
