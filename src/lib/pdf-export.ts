@@ -1,17 +1,32 @@
 /**
  * Tailwind CSS v4 uses oklch() colors which html2canvas cannot parse.
- * This callback inlines computed (rgb) color values on all elements in
- * the cloned DOM so html2canvas never encounters oklch().
+ * Two-phase fix:
+ *  1. Strip oklch() from all <style> elements in the cloned document so
+ *     html2canvas's CSS parser never encounters them.
+ *  2. Inline computed (rgb) color values from the real DOM onto the cloned
+ *     elements so they still render with correct colors.
  */
 function patchClonedColors(_doc: Document, clone: HTMLElement) {
+  // Phase 1: Neutralise oklch() in cloned stylesheets.
+  // Replace oklch(...) with 'transparent' – html2canvas will skip transparent
+  // values and fall back to inline styles set in Phase 2.
+  const styles = _doc.querySelectorAll('style');
+  for (const style of styles) {
+    if (style.textContent && style.textContent.includes('oklch')) {
+      style.textContent = style.textContent.replace(
+        /oklch\([^)]*\)/gi,
+        'transparent',
+      );
+    }
+  }
+
+  // Phase 2: Inline computed rgb colors from the original DOM.
   const COLOR_PROPS = [
     'color', 'background-color', 'border-color',
     'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-    'outline-color', 'text-decoration-color',
+    'outline-color', 'text-decoration-color', 'box-shadow',
   ] as const;
 
-  // Walk the real DOM to read computed styles (already resolved to rgb),
-  // then apply them as inline styles on the matching cloned element.
   const origRoot = document.getElementById(clone.id);
   if (!origRoot) return;
 

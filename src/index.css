@@ -14,4 +14,39 @@
 
 @media print {
   .no-print { display: none !important; }
+
+  /* Hide ReactFlow controls and background grid */
+  .react-flow__controls,
+  .react-flow__background { display: none !important; }
+
+  /* Hide left panel sidebar entirely */
+  .fixed.inset-y-0,
+  [class*="md:w-64"] { display: none !important; }
+
+  /* Hide mobile overlay backdrop */
+  .fixed.inset-0.bg-black\/30 { display: none !important; }
+
+  /* Make tree fill the page */
+  #app-root {
+    height: auto !important;
+    display: block !important;
+  }
+  #family-tree {
+    width: 100vw !important;
+    height: 100vh !important;
+    position: relative !important;
+    overflow: visible !important;
+  }
+  .react-flow {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Ensure nodes are visible and not cut off */
+  .react-flow__viewport {
+    transform: none !important;
+  }
+  .react-flow__node {
+    page-break-inside: avoid;
+  }
 }
