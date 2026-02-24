@@ -160,6 +160,23 @@ export async function exportToPng(elementId: string, filename: string) {
   link.click();
 }
 
-export function printPage() {
-  window.print();
+export async function printPage(elementId: string) {
+  const element = document.getElementById(elementId);
+  if (!element) throw new Error(`Element #${elementId} not found`);
+
+  const canvas = await captureElement(element);
+  const dataUrl = canvas.toDataURL('image/png');
+
+  const win = window.open('', '_blank')!;
+  const doc = win.document;
+
+  const style = doc.createElement('style');
+  style.textContent = '@media print { @page { margin: 10mm; } } body { margin: 0; display: flex; justify-content: center; } img { max-width: 100%; height: auto; }';
+  doc.head.appendChild(style);
+  doc.title = '繼承系統圖';
+
+  const img = doc.createElement('img');
+  img.src = dataUrl;
+  img.onload = () => { win.print(); win.close(); };
+  doc.body.appendChild(img);
 }

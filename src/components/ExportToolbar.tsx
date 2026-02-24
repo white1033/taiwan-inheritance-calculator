@@ -60,7 +60,7 @@ export function ExportToolbar() {
       <button
         type="button"
         disabled={hasErrors}
-        onClick={() => guardedExport(() => printPage())}
+        onClick={() => guardedExport(() => printPage('family-tree'))}
         className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${hasErrors ? 'opacity-40 cursor-not-allowed' : ''}`}
       >
         列印
