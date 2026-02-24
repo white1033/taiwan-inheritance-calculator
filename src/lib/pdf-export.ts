@@ -1,26 +1,38 @@
 /**
- * Tailwind CSS v4 uses oklch() colors which html2canvas cannot parse.
+ * html2canvas cannot parse oklch() colours used by Tailwind CSS v4.
+ * Modern browsers may also return oklch() from getComputedStyle().
  *
- * Fix strategy (two phases inside html2canvas's onclone callback):
+ * Fix strategy (inside onclone):
  *
  *  Phase 1 — Patch stylesheets:
- *    Read all CSS rules from the ORIGINAL document's styleSheets (which
- *    includes <link> stylesheets that are fully loaded), replace every
- *    oklch() call with 'transparent', and inject the patched CSS as a
- *    single <style> element into the cloned document. Remove the original
- *    <style> and <link rel="stylesheet"> elements from the clone so
- *    html2canvas never encounters oklch().
+ *    Read all CSS rules from the ORIGINAL document.styleSheets, replace
+ *    oklch() with 'transparent', inject as <style> into the clone, and
+ *    remove original <style>/<link> elements.
  *
- *  Phase 2 — Inline computed colors:
- *    Walk the original DOM tree to read getComputedStyle() values (which
- *    the browser has already resolved to rgb), and set them as inline
- *    styles on the matching cloned elements. This overrides the
- *    'transparent' placeholders with correct colours.
+ *  Phase 2 — Inline colours as rgb/hex:
+ *    Read computed styles from the original DOM and convert any oklch()
+ *    values to hex via Canvas 2D fillStyle before setting them as
+ *    inline styles on the cloned elements.
  */
-function patchClone(_clonedDoc: Document, clone: HTMLElement) {
+
+// Shared canvas context for oklch → hex conversion
+const _cvs = document.createElement('canvas');
+const _ctx = _cvs.getContext('2d')!;
+
+/** Replace every oklch(...) in a CSS value string with its hex equivalent. */
+function resolveOklch(value: string): string {
+  if (!value || !value.includes('oklch')) return value;
+  return value.replace(/oklch\([^)]*\)/gi, (match) => {
+    _ctx.fillStyle = '#000000';
+    _ctx.fillStyle = match;
+    return _ctx.fillStyle;
+  });
+}
+
+function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
   for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap']) {
-    _clonedDoc.querySelectorAll<HTMLElement>(sel).forEach(el => {
+    clonedDoc.querySelectorAll<HTMLElement>(sel).forEach(el => {
       el.style.display = 'none';
     });
   }
@@ -40,15 +52,15 @@ function patchClone(_clonedDoc: Document, clone: HTMLElement) {
   }
 
   // Remove originals from the clone
-  _clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
+  clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
 
-  // Inject patched CSS
+  // Inject patched CSS (oklch → transparent as a safe placeholder)
   const patched = cssTexts.join('\n').replace(/oklch\([^)]*\)/gi, 'transparent');
-  const styleEl = _clonedDoc.createElement('style');
+  const styleEl = clonedDoc.createElement('style');
   styleEl.textContent = patched;
-  _clonedDoc.head.appendChild(styleEl);
+  clonedDoc.head.appendChild(styleEl);
 
-  // --- Phase 2: Inline computed rgb colours ---
+  // --- Phase 2: Inline computed colours (oklch → hex via canvas) ---
   const COLOR_PROPS = [
     'color', 'background-color', 'border-color',
     'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
@@ -66,7 +78,7 @@ function patchClone(_clonedDoc: Document, clone: HTMLElement) {
     for (const prop of COLOR_PROPS) {
       const value = computed.getPropertyValue(prop);
       if (value) {
-        cloneEls[i].style.setProperty(prop, value);
+        cloneEls[i].style.setProperty(prop, resolveOklch(value));
       }
     }
   }
