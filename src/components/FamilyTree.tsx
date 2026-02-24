@@ -53,7 +53,7 @@ export function FamilyTree() {
     (personId: string, isDecedent: boolean, event: React.MouseEvent) => {
       event.preventDefault();
       const person = state.persons.find(p => p.id === personId);
-      const isSpouse = person?.relation === '子女之配偶';
+      const isSpouse = person?.relation === '子女之配偶' || person?.relation === '配偶';
       setContextMenu({ x: event.clientX, y: event.clientY, personId, isDecedent, isSpouse });
     },
     [state.persons],
