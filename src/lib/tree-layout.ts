@@ -51,6 +51,7 @@ export function buildTreeLayout(
         divorceDate: person.divorceDate,
         inheritanceShare: result?.inheritanceShare ?? ZERO,
         reservedShare: result?.reservedShare ?? ZERO,
+        estateAmount: decedent.estateAmount,
         isDecedent: false,
         isSelected: selectedId === person.id,
         hasErrors: personErrorIds.has(person.id),

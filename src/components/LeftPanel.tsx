@@ -114,6 +114,24 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
               className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          <div>
+            <label htmlFor="decedent-estateAmount" className="block text-sm text-slate-600 mb-1">遺產總額（選填）</label>
+            <input
+              id="decedent-estateAmount"
+              type="number"
+              min="0"
+              value={state.decedent.estateAmount ?? ''}
+              onChange={e => {
+                const val = e.target.value;
+                dispatch({
+                  type: 'SET_DECEDENT',
+                  payload: { estateAmount: val === '' ? undefined : Number(val) }
+                });
+              }}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例：10,000,000"
+            />
+          </div>
         </div>
       </section>
 
@@ -161,6 +179,11 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
                     <div className="text-blue-600 font-mono">
                       應繼分 {toString(r.inheritanceShare)}
                     </div>
+                    {state.decedent.estateAmount != null && state.decedent.estateAmount > 0 && (
+                      <div className="text-slate-600 text-xs">
+                        約 {Math.round(state.decedent.estateAmount * r.inheritanceShare.n / r.inheritanceShare.d).toLocaleString()} 元
+                      </div>
+                    )}
                     <div className="text-slate-400 font-mono text-xs">
                       特留分 {toString(r.reservedShare)}
                     </div>

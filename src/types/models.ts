@@ -60,6 +60,7 @@ export interface Decedent {
   id: string;
   name: string;
   deathDate?: string;
+  estateAmount?: number;
 }
 
 export interface InheritanceCase {

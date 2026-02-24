@@ -15,6 +15,7 @@ export interface PersonNodeData extends Record<string, unknown> {
   inheritanceShare?: Fraction;
   reservedShare?: Fraction;
   isDecedent?: boolean;
+  estateAmount?: number;
   isSelected?: boolean;
   hasErrors?: boolean;
   hasCurrentSpouse?: boolean;
@@ -128,6 +129,11 @@ export const PersonNode = memo(function PersonNode({
           <div className="text-blue-600 font-mono font-semibold">
             應繼分 {toString(data.inheritanceShare)}
           </div>
+          {data.estateAmount != null && data.estateAmount > 0 && data.inheritanceShare && (
+            <div className="text-slate-600 font-mono text-xs">
+              約 {Math.round(data.estateAmount * data.inheritanceShare.n / data.inheritanceShare.d).toLocaleString()} 元
+            </div>
+          )}
           {data.reservedShare && (
             <div className="text-slate-400 font-mono">
               特留分 {toString(data.reservedShare)}
