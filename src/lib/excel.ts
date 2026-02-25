@@ -17,6 +17,11 @@ interface ExcelRow {
 
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10 MB
 
+const COLUMNS = [
+  '編號', '稱謂', '繼承人', '被繼承人', '繼承狀態',
+  '被代位者', '出生日期', '死亡日期', '結婚日期', '離婚日期', '被繼承人死亡日期',
+] as const;
+
 /**
  * Escape cell values that could be interpreted as formulas in spreadsheet apps.
  * Prefixes values starting with =, +, -, @, \t, or \r with a single quote.
@@ -92,24 +97,77 @@ export function fromExcelData(rows: ExcelRow[]): { decedent: Decedent; persons: 
 }
 
 export async function exportToExcel(decedent: Decedent, persons: Person[]) {
-  const XLSX = await import('xlsx');
+  const ExcelJS = await import('exceljs');
   const data = toExcelData(decedent, persons);
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '繼承系統表');
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('繼承系統表');
+
+  // Add header row
+  worksheet.addRow([...COLUMNS]);
+
+  // Add data rows
+  for (const row of data) {
+    worksheet.addRow(COLUMNS.map(col => row[col]));
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
   const safeName = sanitizeFilename(decedent.name || '未命名');
-  XLSX.writeFile(wb, `繼承系統表_${safeName}.xlsx`);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `繼承系統表_${safeName}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function importFromExcel(file: File): Promise<{ decedent: Decedent; persons: Person[] }> {
   if (file.size > MAX_IMPORT_SIZE) {
     throw new Error(`檔案大小超過限制（最大 ${MAX_IMPORT_SIZE / 1024 / 1024} MB）`);
   }
-  const XLSX = await import('xlsx');
+  const ExcelJS = await import('exceljs');
   const buffer = await file.arrayBuffer();
-  const data = new Uint8Array(buffer);
-  const wb = XLSX.read(data, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<ExcelRow>(ws);
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) throw new Error('找不到工作表');
+
+  const rows: ExcelRow[] = [];
+  const headerRow = worksheet.getRow(1);
+  const headers: string[] = [];
+  headerRow.eachCell((cell, colNumber) => {
+    headers[colNumber] = String(cell.value ?? '');
+  });
+
+  for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum++) {
+    const row = worksheet.getRow(rowNum);
+    // Skip empty rows
+    if (!row.hasValues) continue;
+
+    const getValue = (colName: string): string | number => {
+      const colIdx = headers.indexOf(colName);
+      if (colIdx < 0) return '';
+      const cell = row.getCell(colIdx);
+      return cell.value != null ? (typeof cell.value === 'number' ? cell.value : String(cell.value)) : '';
+    };
+
+    rows.push({
+      編號: Number(getValue('編號')) || rowNum - 1,
+      稱謂: String(getValue('稱謂')),
+      繼承人: String(getValue('繼承人')),
+      被繼承人: String(getValue('被繼承人')),
+      繼承狀態: String(getValue('繼承狀態')),
+      被代位者: getValue('被代位者'),
+      出生日期: String(getValue('出生日期')),
+      死亡日期: String(getValue('死亡日期')),
+      結婚日期: String(getValue('結婚日期')),
+      離婚日期: String(getValue('離婚日期')),
+      被繼承人死亡日期: String(getValue('被繼承人死亡日期')),
+    });
+  }
+
   return fromExcelData(rows);
 }
