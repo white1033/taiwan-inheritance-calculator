@@ -133,12 +133,14 @@ export function ExportToolbar() {
       </button>
       <button
         type="button"
-        onClick={() => {
-          const url = buildShareUrl(state.decedent, state.persons);
-          navigator.clipboard.writeText(url).then(
-            () => toast('已複製分享連結到剪貼簿', 'success'),
-            () => toast('複製失敗，請手動複製', 'error'),
-          );
+        onClick={async () => {
+          try {
+            const url = await buildShareUrl(state.decedent, state.persons);
+            await navigator.clipboard.writeText(url);
+            toast('已複製分享連結到剪貼簿', 'success');
+          } catch {
+            toast('複製失敗，請手動複製', 'error');
+          }
         }}
         className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px]"
       >

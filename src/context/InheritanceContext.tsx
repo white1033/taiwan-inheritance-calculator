@@ -1,4 +1,4 @@
-import { useReducer, useMemo, type ReactNode } from 'react';
+import { useReducer, useMemo, useEffect, type ReactNode } from 'react';
 import { InheritanceStateContext, InheritanceDispatchContext } from './InheritanceContextValue';
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
@@ -71,19 +71,6 @@ const EMPTY_CORE: CoreState = {
 };
 
 function buildInitialState(): CoreState {
-  // Priority: URL hash > localStorage
-  const hashState = readHashState();
-  if (hashState) {
-    // Clear the hash after loading to avoid re-loading on refresh
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-    return {
-      decedent: hashState.decedent,
-      persons: hashState.persons,
-      selectedPersonId: null,
-      past: [],
-      future: [],
-    };
-  }
   const saved = loadFromStorage();
   if (saved) {
     return {
@@ -252,6 +239,16 @@ function reducer(state: CoreState, action: Action): CoreState {
 
 export function InheritanceProvider({ children }: { children: ReactNode }) {
   const [coreState, dispatch] = useReducer(reducer, undefined, buildInitialState);
+
+  // Load state from URL hash asynchronously (takes priority over localStorage)
+  useEffect(() => {
+    readHashState().then(hashState => {
+      if (hashState) {
+        dispatch({ type: 'LOAD_PERSONS', payload: hashState });
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    });
+  }, []);
 
   // Derived state: only recomputed when decedent or persons change,
   // NOT on SELECT_PERSON or other non-data actions.

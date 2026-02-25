@@ -1,9 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExportToolbar } from '../ExportToolbar';
 import { InheritanceProvider } from '../../context/InheritanceContext';
 import { ToastProvider } from '../Toast';
+
+vi.mock('../../lib/url-state', () => ({
+  buildShareUrl: vi.fn().mockResolvedValue('https://example.com/#mock'),
+  readHashState: vi.fn().mockResolvedValue(null),
+}));
 
 function renderToolbar() {
   return render(
@@ -45,6 +50,6 @@ describe('ExportToolbar', () => {
     renderToolbar();
 
     await user.click(screen.getByText('複製分享連結'));
-    expect(writeText).toHaveBeenCalledOnce();
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
   });
 });
