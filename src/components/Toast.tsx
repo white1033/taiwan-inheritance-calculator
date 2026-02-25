@@ -15,11 +15,13 @@ interface ToastContextType {
 // eslint-disable-next-line react-refresh/only-export-components
 export const ToastContext = createContext<ToastContextType | null>(null);
 
+let nextToastId = 0;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Date.now() + Math.random();
+    const id = nextToastId++;
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
