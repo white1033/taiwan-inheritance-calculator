@@ -89,6 +89,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       errors.push({ personId: p.id, field: 'deathDate', message: '死亡狀態必須填寫死亡日期' });
     }
 
+    // 出生日期不可晚於死亡日期
+    if (p.birthDate && p.deathDate && p.birthDate > p.deathDate) {
+      errors.push({ personId: p.id, field: 'birthDate', message: '出生日期不可晚於死亡日期' });
+    }
+
     // 死亡日期順序驗證（需要被繼承人死亡日期）
     if (decedent?.deathDate && p.deathDate) {
       if (p.status === '代位繼承' || p.status === '死亡' || p.status === '死亡絕嗣') {

@@ -1,10 +1,15 @@
 import { useInheritance } from '../hooks/useInheritance';
 import { INHERITANCE_STATUS_OPTIONS, RELATION_OPTIONS } from '../types/models';
-import type { Person } from '../types/models';
+import type { Person, Relation, InheritanceStatus } from '../types/models';
 import { countDescendants } from '../lib/person-utils';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
+
+/** Relations that can only appear once (not 子女 or 兄弟姊妹) */
+const SINGULAR_RELATIONS: ReadonlySet<Relation> = new Set([
+  '配偶', '父', '母', '祖父', '祖母', '外祖父', '外祖母', '子女之配偶',
+]);
 
 export function PersonEditor() {
   const { state, dispatch } = useInheritance();
@@ -22,6 +27,21 @@ export function PersonEditor() {
   function update(updates: Partial<Person>) {
     dispatch({ type: 'UPDATE_PERSON', payload: { id: person!.id, updates } });
   }
+
+  // Filter relation options: exclude singular relations already taken by other persons
+  const occupiedSingularRelations = new Set(
+    state.persons
+      .filter(p => p.id !== person.id && SINGULAR_RELATIONS.has(p.relation))
+      .map(p => p.relation),
+  );
+  const availableRelations = RELATION_OPTIONS.filter(
+    r => r === person.relation || !occupiedSingularRelations.has(r),
+  );
+
+  // Filter status options based on context
+  const availableStatuses: InheritanceStatus[] = person.parentId
+    ? INHERITANCE_STATUS_OPTIONS // sub-heirs can use all statuses
+    : INHERITANCE_STATUS_OPTIONS.filter(s => s !== '代位繼承' && s !== '再轉繼承');
 
   return (
     <section className="p-4 border-b border-slate-200">
@@ -62,7 +82,7 @@ export function PersonEditor() {
             onChange={e => update({ relation: e.target.value as Person['relation'] })}
             hasError={!!fieldError('relation')}
           >
-            {RELATION_OPTIONS.map(r => (
+            {availableRelations.map(r => (
               <option key={r} value={r}>{r}</option>
             ))}
           </Select>
@@ -78,7 +98,7 @@ export function PersonEditor() {
             value={person.status}
             onChange={e => update({ status: e.target.value as Person['status'] })}
           >
-            {INHERITANCE_STATUS_OPTIONS.map(s => (
+            {availableStatuses.map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </Select>
@@ -150,7 +170,7 @@ export function PersonEditor() {
           />
         </div>
 
-        {person.relation !== '配偶' && (
+        {person.relation === '子女' && person.status !== '死亡絕嗣' && (
           <div className="border-t border-slate-200 pt-3">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               此人的親屬

@@ -56,13 +56,13 @@ export const PersonNode = memo(function PersonNode({
   return (
     <div
       className={`rounded-lg shadow-md border border-slate-200 border-t-4 ${colorClass} ${ringClass} ${data.isDecedent ? 'bg-slate-50 w-60' : 'bg-white w-52'} cursor-pointer relative group`}
-      onClick={() => onSelect(id)}
+      onClick={() => { if (!data.isDecedent) onSelect(id); }}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(id, !!data.isDecedent, e); }}
       tabIndex={0}
       role="group"
       aria-label={`${data.isDecedent ? '被繼承人' : data.relation} ${data.name || '(未命名)'}`}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if ((e.key === 'Enter' || e.key === ' ') && !data.isDecedent) {
           e.preventDefault();
           onSelect(id);
         } else if ((e.key === 'Delete' || e.key === 'Backspace') && !data.isDecedent) {
@@ -109,6 +109,11 @@ export const PersonNode = memo(function PersonNode({
               再轉
             </span>
           )}
+          {data.status === '死亡絕嗣' && (
+            <span className="text-xs bg-gray-100 text-gray-600 px-1 rounded cursor-help" title="死亡絕嗣：繼承人死亡且無直系血親卑親屬可代位繼承">
+              絕嗣
+            </span>
+          )}
         </div>
         <div
           className={`font-semibold text-sm ${data.status === '拋棄繼承' ? 'line-through text-slate-400' : 'text-slate-800'}`}
@@ -137,7 +142,7 @@ export const PersonNode = memo(function PersonNode({
         )}
       </div>
 
-      {!data.isDecedent && data.inheritanceShare && (
+      {!data.isDecedent && data.inheritanceShare && data.inheritanceShare.n > 0 && (
         <div className="px-3 py-2 border-t border-slate-100 text-xs">
           <div className="text-blue-600 font-mono font-semibold" title="應繼分：依法律規定各繼承人應得之遺產比例">
             應繼分 {toString(data.inheritanceShare)}{' '}
@@ -148,7 +153,7 @@ export const PersonNode = memo(function PersonNode({
               約 {Math.round(data.estateAmount * data.inheritanceShare.n / data.inheritanceShare.d).toLocaleString()} 元
             </div>
           )}
-          {data.reservedShare && (
+          {data.reservedShare && data.reservedShare.n > 0 && (
             <div className="text-slate-500 font-mono" title="特留分（民法§1223）：繼承人依法保留之最低遺產比例，不得以遺囑剝奪">
               特留分 {toString(data.reservedShare)}
             </div>
@@ -156,7 +161,7 @@ export const PersonNode = memo(function PersonNode({
         </div>
       )}
 
-      {!data.isDecedent && data.relation === '子女' && (
+      {!data.isDecedent && data.relation === '子女' && data.status !== '死亡絕嗣' && (
         <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button
             type="button"

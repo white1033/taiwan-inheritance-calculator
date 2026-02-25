@@ -33,7 +33,7 @@ export function FamilyTree() {
   const { state, dispatch } = useInheritance();
 
   const [contextMenu, setContextMenu] = useState<{
-    x: number; y: number; personId: string; isDecedent: boolean; isSpouse: boolean;
+    x: number; y: number; personId: string; isDecedent: boolean;
   } | null>(null);
 
   const onSelect = useCallback(
@@ -62,9 +62,7 @@ export function FamilyTree() {
   const onContextMenu = useCallback(
     (personId: string, isDecedent: boolean, event: React.MouseEvent) => {
       event.preventDefault();
-      const person = state.persons.find(p => p.id === personId);
-      const isSpouse = person?.relation === '子女之配偶' || person?.relation === '配偶';
-      setContextMenu({ x: event.clientX, y: event.clientY, personId, isDecedent, isSpouse });
+      setContextMenu({ x: event.clientX, y: event.clientY, personId, isDecedent });
     },
     [state.persons],
   );
@@ -105,6 +103,10 @@ export function FamilyTree() {
       state.validationErrors,
     ],
   );
+
+  const contextPerson = contextMenu
+    ? state.persons.find(p => p.id === contextMenu.personId)
+    : null;
 
   const hasCurrentSpouseForContextPerson = contextMenu
     ? state.persons.some(
@@ -156,7 +158,8 @@ export function FamilyTree() {
           y={contextMenu.y}
           personId={contextMenu.personId}
           isDecedent={contextMenu.isDecedent}
-          isSpouse={contextMenu.isSpouse}
+          isChild={contextPerson?.relation === '子女'}
+          isDiedWithoutIssue={contextPerson?.status === '死亡絕嗣'}
           hasCurrentSpouse={hasCurrentSpouseForContextPerson}
           onAddChild={onAddChild}
           onAddSpouse={onAddSpouse}

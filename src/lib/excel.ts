@@ -13,13 +13,14 @@ interface ExcelRow {
   結婚日期: string;
   離婚日期: string;
   被繼承人死亡日期: string;
+  遺產總額: number | string;
 }
 
 const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const COLUMNS = [
   '編號', '稱謂', '繼承人', '被繼承人', '繼承狀態',
-  '被代位者', '出生日期', '死亡日期', '結婚日期', '離婚日期', '被繼承人死亡日期',
+  '被代位者', '出生日期', '死亡日期', '結婚日期', '離婚日期', '被繼承人死亡日期', '遺產總額',
 ] as const;
 
 /**
@@ -72,6 +73,7 @@ export function toExcelData(decedent: Decedent, persons: Person[]): ExcelRow[] {
       結婚日期: p.marriageDate || '',
       離婚日期: p.divorceDate || '',
       被繼承人死亡日期: decedent.deathDate || '',
+      遺產總額: decedent.estateAmount ?? '',
     };
   });
 }
@@ -100,8 +102,12 @@ export function fromExcelData(rows: ExcelRow[]): { decedent: Decedent; persons: 
       parentId,
     };
   });
+  const rawEstateAmount = rows[0]?.遺產總額;
+  const estateAmount = rawEstateAmount !== '' && rawEstateAmount != null
+    ? Number(rawEstateAmount)
+    : undefined;
   return {
-    decedent: { id: 'decedent', name: decedentName, deathDate: decedentDeathDate },
+    decedent: { id: 'decedent', name: decedentName, deathDate: decedentDeathDate, estateAmount: !isNaN(estateAmount as number) ? estateAmount : undefined },
     persons,
   };
 }
@@ -176,6 +182,7 @@ export async function importFromExcel(file: File): Promise<{ decedent: Decedent;
       結婚日期: String(getValue('結婚日期')),
       離婚日期: String(getValue('離婚日期')),
       被繼承人死亡日期: String(getValue('被繼承人死亡日期')),
+      遺產總額: getValue('遺產總額'),
     });
   }
 

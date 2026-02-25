@@ -97,6 +97,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
           onClick={() => {
             if (window.confirm('確定要清除所有資料嗎？')) {
               dispatch({ type: 'RESET_STATE' });
+              setSelectedPresetIndex(null);
             }
           }}
         >

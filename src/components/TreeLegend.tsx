@@ -10,6 +10,7 @@ const EDGE_ITEMS: readonly { label: string; color: string; dash: string | false 
 const NODE_COLORS = [
   { label: '一般繼承', color: 'bg-green-500' },
   { label: '死亡', color: 'bg-gray-400' },
+  { label: '死亡絕嗣', color: 'bg-gray-400' },
   { label: '拋棄繼承', color: 'bg-red-500' },
   { label: '代位繼承', color: 'bg-emerald-400' },
   { label: '再轉繼承', color: 'bg-orange-400' },

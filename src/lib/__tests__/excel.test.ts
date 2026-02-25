@@ -61,6 +61,23 @@ describe('Excel data conversion', () => {
     expect(importedDecedent.deathDate).toBeUndefined();
   });
 
+  it('roundtrips estateAmount through Excel format', () => {
+    const decedentWithEstate: Decedent = { id: 'D', name: '王大明', deathDate: '2024-01-01', estateAmount: 10000000 };
+    const rows = toExcelData(decedentWithEstate, persons);
+    expect(rows[0]['遺產總額']).toBe(10000000);
+
+    const { decedent: importedDecedent } = fromExcelData(rows);
+    expect(importedDecedent.estateAmount).toBe(10000000);
+  });
+
+  it('preserves estateAmount as undefined when not set', () => {
+    const rows = toExcelData(decedent, persons);
+    expect(rows[0]['遺產總額']).toBe('');
+
+    const { decedent: importedDecedent } = fromExcelData(rows);
+    expect(importedDecedent.estateAmount).toBeUndefined();
+  });
+
   it('escapes formula injection in names starting with =, +, -, @', () => {
     const dangerousPersons: Person[] = [
       { id: '1', name: '=HYPERLINK("http://evil.com")', relation: '子女', status: '一般繼承' },
@@ -108,6 +125,7 @@ describe('Excel data conversion', () => {
         結婚日期: '',
         離婚日期: '',
         被繼承人死亡日期: '',
+        遺產總額: '',
       },
     ];
     const { persons: imported } = fromExcelData(rowsWithBadRef);
@@ -128,6 +146,7 @@ describe('Excel data conversion', () => {
         結婚日期: '',
         離婚日期: '',
         被繼承人死亡日期: '',
+        遺產總額: '',
       },
     ];
     const { persons: imported } = fromExcelData(invalidRows);

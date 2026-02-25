@@ -5,7 +5,10 @@ interface NodeContextMenuProps {
   y: number;
   personId: string;
   isDecedent: boolean;
-  isSpouse: boolean;
+  /** Person is a 子女 (only relation that supports sub-heirs in the tree) */
+  isChild: boolean;
+  /** Person has 死亡絕嗣 status (cannot have sub-heirs) */
+  isDiedWithoutIssue: boolean;
   hasCurrentSpouse: boolean;
   onAddChild: (parentId: string) => void;
   onAddSpouse: (parentId: string) => void;
@@ -19,7 +22,8 @@ export function NodeContextMenu({
   y,
   personId,
   isDecedent,
-  isSpouse,
+  isChild,
+  isDiedWithoutIssue,
   hasCurrentSpouse,
   onAddChild,
   onAddSpouse,
@@ -78,7 +82,7 @@ export function NodeContextMenu({
         style={{ left: pos.left, top: pos.top }}
         onKeyDown={handleMenuKeyDown}
       >
-        {!isSpouse && (
+        {isChild && !isDiedWithoutIssue && (
           <button
             type="button"
             role="menuitem"
@@ -88,7 +92,7 @@ export function NodeContextMenu({
             + 新增子女
           </button>
         )}
-        {!isDecedent && !isSpouse && !hasCurrentSpouse && (
+        {isChild && !hasCurrentSpouse && (
           <button
             type="button"
             role="menuitem"
@@ -98,15 +102,19 @@ export function NodeContextMenu({
             + 新增配偶
           </button>
         )}
-        <div className="border-t border-slate-100 my-1" />
-        <button
-          type="button"
-          role="menuitem"
-          className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-          onClick={() => { onEdit(personId); onClose(); }}
-        >
-          編輯
-        </button>
+        {!isDecedent && (
+          <>
+            <div className="border-t border-slate-100 my-1" />
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+              onClick={() => { onEdit(personId); onClose(); }}
+            >
+              編輯
+            </button>
+          </>
+        )}
         {!isDecedent && (
           <button
             type="button"
