@@ -97,11 +97,15 @@ export function PersonEditor() {
             id="person-status"
             value={person.status}
             onChange={e => update({ status: e.target.value as Person['status'] })}
+            hasError={!!fieldError('status')}
           >
             {availableStatuses.map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </Select>
+          {fieldError('status') && (
+            <p className="text-xs text-red-500 mt-1">{fieldError('status')}</p>
+          )}
         </div>
 
         {(person.status === '代位繼承' || (person.status === '再轉繼承' && person.relation !== '配偶')) && (
