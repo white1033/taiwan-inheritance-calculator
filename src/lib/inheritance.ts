@@ -1,5 +1,5 @@
 import type { Fraction } from './fraction';
-import { frac, subtract, divide, multiply, ZERO } from './fraction';
+import { frac, add, subtract, divide, multiply, equals, ZERO, ONE } from './fraction';
 import type { Person, Decedent, Relation } from '../types/models';
 import { getOrder } from '../types/models';
 
@@ -249,6 +249,17 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
         reservedShare: ZERO,
       });
     }
+  }
+
+
+  // Sanity check: all shares must sum to 1 (or 0 if no heirs)
+  const totalShare = results.reduce((sum, r) => add(sum, r.inheritanceShare), ZERO);
+  const expectedTotal = results.some(r => r.inheritanceShare.n > 0) ? ONE : ZERO;
+  if (!equals(totalShare, expectedTotal)) {
+    throw new Error(
+      `Inheritance share invariant violated: shares sum to ${totalShare.n}/${totalShare.d}, ` +
+      `expected ${expectedTotal.n}/${expectedTotal.d}`
+    );
   }
 
   return results;
