@@ -160,9 +160,17 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
         </h2>
         <div className="grid grid-cols-2 gap-2">
           {HEIR_BUTTONS.map(({ label, relation }) => {
-            // 子女、兄弟姊妹可重複新增，其餘關係（配偶、父、母、祖父母等）只能有一個
-            const isSingular = relation !== '子女' && relation !== '兄弟姊妹';
-            const disabled = isSingular && existingRelations.has(relation);
+            let disabled: boolean;
+            if (relation === '配偶') {
+              // 配偶：只要有現任活躍配偶就不能再新增
+              disabled = state.persons.some(
+                p => p.relation === '配偶' && !p.parentId && !p.divorceDate && p.status !== '死亡'
+              );
+            } else if (relation === '子女' || relation === '兄弟姊妹') {
+              disabled = false;
+            } else {
+              disabled = existingRelations.has(relation);
+            }
             return (
               <Button
                 key={relation}
