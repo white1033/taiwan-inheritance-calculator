@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useInheritance } from '../hooks/useInheritance';
 import { PersonEditor } from './PersonEditor';
 import type { Relation } from '../types/models';
-import { toString } from '../lib/fraction';
+import { toString, toPercent } from '../lib/fraction';
 import { PRESETS } from '../lib/presets';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -34,7 +34,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
     <div
       id="left-panel"
       className={[
-        'no-print bg-white flex flex-col overflow-y-auto border-r border-slate-200',
+        'no-print bg-white flex flex-col overflow-hidden border-r border-slate-200',
         // Tablet+: always visible, fixed width
         'md:relative md:translate-x-0 md:w-64 lg:w-80 2xl:w-96 md:z-auto',
         // Mobile: slide-in drawer
@@ -43,7 +43,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
       ].join(' ')}
     >
       {/* Close button for mobile */}
-      <div className="md:hidden flex justify-end p-2">
+      <div className="md:hidden flex justify-end p-2 shrink-0">
         <button
           type="button"
           onClick={onClose}
@@ -56,6 +56,9 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
         </button>
       </div>
 
+      {/* Scrollable upper area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+
       {/* Presets Selection */}
       <section className="p-4 border-b border-slate-200">
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
@@ -66,6 +69,10 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
           onChange={(e) => {
             const presetIndex = parseInt(e.target.value, 10);
             if (!isNaN(presetIndex) && PRESETS[presetIndex]) {
+              if (state.persons.length > 0 && !window.confirm('載入範例會覆蓋目前的資料，是否繼續？')) {
+                e.target.value = '';
+                return;
+              }
               const { decedent, persons } = PRESETS[presetIndex];
               dispatch({ type: 'LOAD_PERSONS', payload: { decedent, persons } });
               setSelectedPresetIndex(presetIndex);
@@ -170,8 +177,28 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
       {/* Person Editor */}
       <PersonEditor />
 
-      {/* Results Summary */}
-      <section className="p-4 flex-1">
+      </div>{/* end scrollable upper area */}
+
+      {/* Validation Errors + Results — sticky at bottom */}
+      <section className="p-4 border-t border-slate-200 shrink-0 max-h-[40vh] overflow-y-auto bg-slate-50">
+        {state.validationErrors.length > 0 && (
+          <div className="mb-3 bg-red-50 border border-red-200 rounded-md p-2.5">
+            <h3 className="text-xs font-semibold text-red-700 mb-1">
+              驗證錯誤（{state.validationErrors.length}）
+            </h3>
+            <ul className="text-xs text-red-600 space-y-0.5">
+              {state.validationErrors.map((err, i) => {
+                const person = state.persons.find(p => p.id === err.personId);
+                return (
+                  <li key={i} className="flex gap-1">
+                    <span className="font-medium shrink-0">{person?.name || '(未命名)'}：</span>
+                    <span>{err.message}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
           計算結果
         </h2>
@@ -186,7 +213,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
                   <span className="font-medium">{r.name || '(未命名)'}</span>
                   <div className="text-right">
                     <div className="text-blue-600 font-mono">
-                      應繼分 {toString(r.inheritanceShare)}
+                      應繼分 {toString(r.inheritanceShare)} ({toPercent(r.inheritanceShare)})
                     </div>
                     {state.decedent.estateAmount != null && state.decedent.estateAmount > 0 && (
                       <div className="text-slate-600 text-xs">

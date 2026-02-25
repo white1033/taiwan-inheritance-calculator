@@ -50,7 +50,8 @@ describe('tree-layout', () => {
     
     const d = findNode({ nodes, edges }, 'D');
     expect(d).toBeDefined();
-    expect(d?.position).toEqual({ x: 0, y: 0 });
+    // DECEDENT_NODE_WIDTH=240, offset = -(240-208)/2 = -16
+    expect(d?.position).toEqual({ x: -16, y: 0 });
     expect(d?.data.isDecedent).toBe(true);
     expect(d?.data.name).toBe('被繼承人');
   });
@@ -65,7 +66,9 @@ describe('tree-layout', () => {
     
     const edge = findEdge({ nodes, edges }, 'D', 'S');
     expect(edge).toBeDefined();
-    expect(edge?.style?.strokeDasharray).toBe('5,5');
+    // Spouse edge: solid line with distinct stroke color (no dashes)
+    expect(edge?.style?.stroke).toBe('#94a3b8');
+    expect(edge?.style?.strokeWidth).toBe(2);
   });
 
   test('Parents: 父+母 -> both above decedent, centered', () => {
@@ -123,18 +126,20 @@ describe('tree-layout', () => {
     expect(c1?.position.y).toBe(280);
   });
 
-  test('Siblings: to the right of decedent', () => {
+  test('Siblings: to the right of decedent, horizontal layout', () => {
     const { nodes, edges } = layout([makePerson('B1', '兄弟姊妹'), makePerson('B2', '兄弟姊妹')]);
     const b1 = findNode({ nodes, edges }, 'B1');
     const b2 = findNode({ nodes, edges }, 'B2');
 
-    // x = NODE_WIDTH + H_GAP * 2 = 208 + 80 = 288
+    // siblingStartX = NODE_WIDTH + H_GAP * 2 = 208 + 80 = 288
+    // b1.x = 288 + 0 * (208+40) = 288
     expect(b1?.position.x).toBe(288);
-    expect(b2?.position.x).toBe(288);
+    // b2.x = 288 + 1 * (208+40) = 536
+    expect(b2?.position.x).toBe(536);
 
-    // y spacing = i * (NODE_HEIGHT + V_GAP / 2) = i * (200 + 40) = i * 240
+    // All siblings on same y = 0
     expect(b1?.position.y).toBe(0);
-    expect(b2?.position.y).toBe(240);
+    expect(b2?.position.y).toBe(0);
   });
 
   test('Grandparents: 祖父+祖母 connect to 父, 外祖父+外祖母 connect to 母', () => {
@@ -200,7 +205,9 @@ describe('tree-layout', () => {
     
     const edge = findEdge({ nodes, edges }, 'C', 'CS');
     expect(edge).toBeDefined();
-    expect(edge?.style?.strokeDasharray).toBe('5,5');
+    // Spouse edge: solid line with distinct stroke color (no dashes)
+    expect(edge?.style?.stroke).toBe('#94a3b8');
+    expect(edge?.style?.strokeWidth).toBe(2);
   });
 
   test('Selection and errors: node data flags', () => {
@@ -293,7 +300,8 @@ describe('tree-layout', () => {
     const { nodes } = layout(persons);
 
     const b1 = findNode({ nodes, edges: [] }, 'B1');
-    // With spouse: x = NODE_WIDTH + H_GAP*2 + NODE_WIDTH + H_GAP = 536
+    // siblingStartX = NODE_WIDTH + H_GAP*2 + NODE_WIDTH + H_GAP = 536
+    // b1.x = 536 + 0 * (208+40) = 536
     expect(b1?.position.x).toBe(536);
   });
 });

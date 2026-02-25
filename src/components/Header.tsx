@@ -1,9 +1,13 @@
 interface HeaderProps {
   onTogglePanel: () => void;
   panelOpen?: boolean;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
-export function Header({ onTogglePanel, panelOpen }: HeaderProps) {
+export function Header({ onTogglePanel, panelOpen, canUndo, canRedo, onUndo, onRedo }: HeaderProps) {
   return (
     <header className="no-print bg-slate-800 text-white px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3 landscape-compact">
       <button
@@ -24,11 +28,37 @@ export function Header({ onTogglePanel, panelOpen }: HeaderProps) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-      <div>
+      <div className="flex-1">
         <h1 className="text-lg lg:text-xl font-bold">繼承系統表計算工具</h1>
         <p className="text-slate-300 text-xs lg:text-sm mt-0.5 lg:mt-1 landscape-hide">
           依據台灣民法繼承編，計算法定應繼分與特留分
         </p>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="p-2 rounded-md hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-w-[36px] min-h-[36px] flex items-center justify-center"
+          aria-label="復原"
+          title="復原 (Ctrl+Z)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="p-2 rounded-md hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-w-[36px] min-h-[36px] flex items-center justify-center"
+          aria-label="重做"
+          title="重做 (Ctrl+Y)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" />
+          </svg>
+        </button>
       </div>
     </header>
   );

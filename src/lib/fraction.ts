@@ -78,5 +78,13 @@ export function toString(f: Fraction): string {
   return `${f.n}/${f.d}`;
 }
 
+export function toPercent(f: Fraction): string {
+  if (f.n === 0) return '0%';
+  const pct = (f.n / f.d) * 100;
+  // Use up to 1 decimal place, drop trailing .0
+  const formatted = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
+  return `${formatted}%`;
+}
+
 export const ZERO = frac(0);
 export const ONE = frac(1);

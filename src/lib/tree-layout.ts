@@ -6,6 +6,7 @@ import { ZERO } from './fraction.ts';
 import type { PersonNodeData, PersonNodeType } from '../components/PersonNode.tsx';
 
 const NODE_WIDTH = 208;
+const DECEDENT_NODE_WIDTH = 240;
 const NODE_HEIGHT = 200;
 const H_GAP = 40;
 const V_GAP = 80;
@@ -118,7 +119,8 @@ export function buildTreeLayout(
         source: personId,
         target: personSpouse.id,
         type: 'straight',
-        style: { strokeDasharray: '5,5' },
+        style: { stroke: '#94a3b8', strokeWidth: 2 },
+        label: '婚',
       });
     }
 
@@ -162,12 +164,13 @@ export function buildTreeLayout(
   nodes.push({
     id: decedent.id,
     type: 'person',
-    position: { x: 0, y: 0 },
+    position: { x: -(DECEDENT_NODE_WIDTH - NODE_WIDTH) / 2, y: 0 },
     data: {
       name: decedent.name || '(未命名)',
       relation: '配偶',
       status: '死亡',
       deathDate: decedent.deathDate,
+      estateAmount: decedent.estateAmount,
       isDecedent: true,
       isSelected: false,
     } satisfies PersonNodeData,
@@ -182,7 +185,8 @@ export function buildTreeLayout(
       source: decedent.id,
       target: spouse.id,
       type: 'straight',
-      style: { strokeDasharray: '5,5' },
+      style: { stroke: '#94a3b8', strokeWidth: 2 },
+      label: '婚',
     });
   }
 
@@ -294,14 +298,14 @@ export function buildTreeLayout(
     childX += w + H_GAP;
   }
 
-  // Siblings to the right (no parentId)
+  // Siblings to the right (no parentId) — horizontal layout
   const siblingPersons = persons.filter(
     (p) => p.relation === '兄弟姊妹' && !p.parentId,
   );
+  const siblingStartX = NODE_WIDTH + H_GAP * 2 + (spouse ? NODE_WIDTH + H_GAP : 0);
   siblingPersons.forEach((sib, i) => {
-    const x = NODE_WIDTH + H_GAP * 2 + (spouse ? NODE_WIDTH + H_GAP : 0);
-    const y = i * (NODE_HEIGHT + V_GAP / 2);
-    addPersonNode(sib, x, y);
+    const x = siblingStartX + i * (NODE_WIDTH + H_GAP);
+    addPersonNode(sib, x, 0);
     edges.push({
       id: `e-${decedent.id}-${sib.id}`,
       source: decedent.id,

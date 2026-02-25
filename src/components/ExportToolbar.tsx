@@ -80,7 +80,7 @@ export function ExportToolbar() {
     }${loadingAction === action ? ' pointer-events-none' : ''}`;
 
   return (
-    <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 flex flex-wrap gap-2 lg:gap-3">
+    <footer className="no-print bg-slate-50 border-t border-slate-200 px-3 py-2 lg:px-6 lg:py-3 grid grid-cols-3 sm:flex sm:flex-wrap gap-2 lg:gap-3">
       <button
         type="button"
         disabled={hasErrors || !!loadingAction}

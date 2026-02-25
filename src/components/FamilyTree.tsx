@@ -3,6 +3,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  MiniMap,
   useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
@@ -13,6 +14,7 @@ import { buildTreeLayout } from '../lib/tree-layout.ts';
 import { countDescendants } from '../lib/person-utils.ts';
 import { NodeContextMenu } from './NodeContextMenu.tsx';
 import { TreeActionsContext, type TreeActions } from '../context/TreeActionsContext.tsx';
+import { TreeLegend } from './TreeLegend.tsx';
 
 const nodeTypes: NodeTypes = {
   person: PersonNode,
@@ -126,15 +128,29 @@ export function FamilyTree() {
         >
           <Background />
           <Controls className="no-print" />
+          <MiniMap className="no-print" pannable zoomable />
           <PrintFitView />
         </ReactFlow>
       </TreeActionsContext.Provider>
+      <TreeLegend />
       {showMobileHint && (
-        <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">
-          <p className="bg-slate-800/80 text-white text-sm px-4 py-2 rounded-full">
-            點擊左上角 ☰ 開始新增繼承人
-          </p>
-        </div>
+        <>
+          <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">
+            <p className="bg-slate-800/80 text-white text-sm px-4 py-2 rounded-full">
+              點擊左上角 ☰ 開始新增繼承人
+            </p>
+          </div>
+          <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
+            <div className="bg-white/90 border border-slate-200 shadow-lg rounded-xl p-6 text-center max-w-sm">
+              <p className="text-slate-600 text-sm mb-2">
+                從左側面板新增繼承人，或選擇範例案例快速開始
+              </p>
+              <p className="text-slate-400 text-xs">
+                支援配偶、子女、父母、兄弟姊妹、祖父母等關係
+              </p>
+            </div>
+          </div>
+        </>
       )}
       {contextMenu && (
         <NodeContextMenu
