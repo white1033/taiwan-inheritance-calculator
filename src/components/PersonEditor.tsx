@@ -35,7 +35,12 @@ export function PersonEditor() {
       .map(p => p.relation),
   );
   const availableRelations = RELATION_OPTIONS.filter(
-    r => r === person.relation || !occupiedSingularRelations.has(r),
+    r => {
+      if (r !== person.relation && occupiedSingularRelations.has(r)) return false;
+      // 子女之配偶僅能由 sub-heir 使用（必須有 parentId）
+      if (r === '子女之配偶' && !person.parentId) return false;
+      return true;
+    },
   );
 
   // Filter status options based on context

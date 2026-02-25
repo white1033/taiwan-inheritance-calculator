@@ -80,6 +80,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       errors.push({ personId: p.id, field: 'parentId', message: '配偶不可作為代位或再轉繼承人' });
     }
 
+    // 子女之配偶必須有 parentId（僅作為子女的附屬顯示角色）
+    if (p.relation === '子女之配偶' && !p.parentId) {
+      errors.push({ personId: p.id, field: 'relation', message: '子女之配偶必須隸屬於一位子女' });
+    }
+
     // 1-5: 離婚配偶警告
     if (p.relation === '配偶' && p.divorceDate && p.status === '一般繼承') {
       errors.push({ personId: p.id, field: 'divorceDate', message: '已離婚之配偶不具繼承權，應繼分將為零' });
