@@ -148,6 +148,7 @@ export function buildTreeLayout(
         target: child.id,
         sourceHandle: 'bottom',
         targetHandle: 'top',
+        type: 'smoothstep',
         style:
           child.status === '代位繼承'
             ? { strokeDasharray: '5,5' }
@@ -240,6 +241,7 @@ export function buildTreeLayout(
         target: decedent.id,
         sourceHandle: 'bottom',
         targetHandle: 'top',
+        type: 'smoothstep',
       });
 
       // Place grandparents for this parent
@@ -255,6 +257,7 @@ export function buildTreeLayout(
             target: node.id,
             sourceHandle: 'bottom',
             targetHandle: 'top',
+            type: 'smoothstep',
           });
         });
       }
@@ -278,6 +281,7 @@ export function buildTreeLayout(
         target: decedent.id,
         sourceHandle: 'bottom',
         targetHandle: 'top',
+        type: 'smoothstep',
       });
       currentX += NODE_WIDTH + H_GAP;
     });
@@ -304,6 +308,7 @@ export function buildTreeLayout(
       target: child.id,
       sourceHandle: 'bottom',
       targetHandle: 'top',
+      type: 'smoothstep',
     });
     // Recurse into sub-tree
     layoutSubtree(child.id, cx, childY);
@@ -324,6 +329,7 @@ export function buildTreeLayout(
       target: sib.id,
       sourceHandle: 'bottom',
       targetHandle: 'top',
+      type: 'smoothstep',
     });
   });
 
