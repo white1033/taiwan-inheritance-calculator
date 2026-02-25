@@ -11,6 +11,7 @@ import { useInheritance } from '../hooks/useInheritance.ts';
 import { PersonNode } from './PersonNode.tsx';
 import { buildTreeLayout } from '../lib/tree-layout.ts';
 import { NodeContextMenu } from './NodeContextMenu.tsx';
+import { TreeActionsContext, type TreeActions } from '../context/TreeActionsContext.tsx';
 
 const nodeTypes: NodeTypes = {
   person: PersonNode,
@@ -84,31 +85,26 @@ export function FamilyTree() {
     [dispatch],
   );
 
+  const treeActions = useMemo<TreeActions>(
+    () => ({ onSelect, onDelete, onContextMenu, onAddChild, onAddSpouse }),
+    [onSelect, onDelete, onContextMenu, onAddChild, onAddSpouse],
+  );
+
   const { nodes, edges } = useMemo(
     () =>
-      buildTreeLayout(
-        state.decedent,
-        state.persons,
-        state.results,
-        state.selectedPersonId,
-        onSelect,
-        onDelete,
-        state.validationErrors,
-        onContextMenu,
-        onAddChild,
-        onAddSpouse,
-      ),
+      buildTreeLayout({
+        decedent: state.decedent,
+        persons: state.persons,
+        results: state.results,
+        selectedId: state.selectedPersonId,
+        validationErrors: state.validationErrors,
+      }),
     [
       state.decedent,
       state.persons,
       state.results,
       state.selectedPersonId,
-      onSelect,
-      onDelete,
       state.validationErrors,
-      onContextMenu,
-      onAddChild,
-      onAddSpouse,
     ],
   );
 
@@ -122,18 +118,20 @@ export function FamilyTree() {
 
   return (
     <>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls className="no-print" />
-        <PrintFitView />
-      </ReactFlow>
+      <TreeActionsContext.Provider value={treeActions}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background />
+          <Controls className="no-print" />
+          <PrintFitView />
+        </ReactFlow>
+      </TreeActionsContext.Provider>
       {showMobileHint && (
         <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">
           <p className="bg-slate-800/80 text-white text-sm px-4 py-2 rounded-full">

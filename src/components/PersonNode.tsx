@@ -3,6 +3,7 @@ import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import type { InheritanceStatus, Relation } from '../types/models.ts';
 import type { Fraction } from '../lib/fraction.ts';
 import { toString } from '../lib/fraction.ts';
+import { useTreeActions } from '../context/TreeActionsContext.tsx';
 
 export interface PersonNodeData extends Record<string, unknown> {
   name: string;
@@ -19,11 +20,6 @@ export interface PersonNodeData extends Record<string, unknown> {
   isSelected?: boolean;
   hasErrors?: boolean;
   hasCurrentSpouse?: boolean;
-  onSelect?: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onContextMenu?: (id: string, isDecedent: boolean, event: React.MouseEvent) => void;
-  onAddChild?: (id: string) => void;
-  onAddSpouse?: (id: string) => void;
 }
 
 export type PersonNodeType = Node<PersonNodeData, 'person'>;
@@ -46,6 +42,8 @@ export const PersonNode = memo(function PersonNode({
   id,
   data,
 }: NodeProps<PersonNodeType>) {
+  const { onSelect, onDelete, onContextMenu, onAddChild, onAddSpouse } = useTreeActions();
+
   const colorClass = data.isDecedent
     ? STATUS_COLORS.decedent
     : STATUS_COLORS[data.status];
@@ -58,18 +56,18 @@ export const PersonNode = memo(function PersonNode({
   return (
     <div
       className={`bg-white rounded-lg shadow-md border-t-4 ${colorClass} ${ringClass} w-52 cursor-pointer relative group`}
-      onClick={() => data.onSelect?.(id)}
-      onContextMenu={(e) => { e.preventDefault(); data.onContextMenu?.(id, !!data.isDecedent, e); }}
+      onClick={() => onSelect(id)}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(id, !!data.isDecedent, e); }}
       tabIndex={0}
-      role="button"
+      role="group"
       aria-label={`${data.isDecedent ? '被繼承人' : data.relation} ${data.name || '(未命名)'}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          data.onSelect?.(id);
+          onSelect(id);
         } else if ((e.key === 'Delete' || e.key === 'Backspace') && !data.isDecedent) {
           e.preventDefault();
-          data.onDelete?.(id);
+          onDelete(id);
         }
       }}
     >
@@ -80,7 +78,7 @@ export const PersonNode = memo(function PersonNode({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            data.onDelete?.(id);
+            onDelete(id);
           }}
           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-100 text-red-500 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           aria-label="刪除"
@@ -135,7 +133,7 @@ export const PersonNode = memo(function PersonNode({
             </div>
           )}
           {data.reservedShare && (
-            <div className="text-slate-400 font-mono">
+            <div className="text-slate-500 font-mono">
               特留分 {toString(data.reservedShare)}
             </div>
           )}
@@ -146,7 +144,7 @@ export const PersonNode = memo(function PersonNode({
         <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); data.onAddChild?.(id); }}
+            onClick={(e) => { e.stopPropagation(); onAddChild(id); }}
             className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
             title="新增子女"
             aria-label="新增子女"
@@ -156,7 +154,7 @@ export const PersonNode = memo(function PersonNode({
           {!data.hasCurrentSpouse && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); data.onAddSpouse?.(id); }}
+              onClick={(e) => { e.stopPropagation(); onAddSpouse(id); }}
               className="text-xs px-2 py-0.5 bg-orange-50 text-orange-600 rounded hover:bg-orange-100"
               title="新增配偶"
               aria-label="新增配偶"

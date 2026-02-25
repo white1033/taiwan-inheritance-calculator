@@ -1,4 +1,3 @@
-import type React from 'react';
 import type { Edge } from '@xyflow/react';
 import type { Person, Decedent } from '../types/models.ts';
 import type { CalculationResult } from './inheritance.ts';
@@ -11,18 +10,24 @@ const NODE_HEIGHT = 200;
 const H_GAP = 40;
 const V_GAP = 80;
 
+export interface TreeLayoutOptions {
+  decedent: Decedent;
+  persons: Person[];
+  results: CalculationResult[];
+  selectedId: string | null;
+  validationErrors?: ValidationError[];
+}
+
 export function buildTreeLayout(
-  decedent: Decedent,
-  persons: Person[],
-  results: CalculationResult[],
-  selectedId: string | null,
-  onSelect: (id: string) => void,
-  onDelete: (id: string) => void,
-  validationErrors: ValidationError[] = [],
-  onContextMenu?: (id: string, isDecedent: boolean, event: React.MouseEvent) => void,
-  onAddChild?: (id: string) => void,
-  onAddSpouse?: (id: string) => void,
+  options: TreeLayoutOptions,
 ): { nodes: PersonNodeType[]; edges: Edge[] } {
+  const {
+    decedent,
+    persons,
+    results,
+    selectedId,
+    validationErrors = [],
+  } = options;
   const nodes: PersonNodeType[] = [];
   const edges: Edge[] = [];
 
@@ -56,11 +61,6 @@ export function buildTreeLayout(
         isSelected: selectedId === person.id,
         hasErrors: personErrorIds.has(person.id),
         hasCurrentSpouse: hasCurrentSpouse(person.id),
-        onSelect,
-        onDelete,
-        onContextMenu,
-        onAddChild,
-        onAddSpouse,
       } satisfies PersonNodeData,
     });
   }
@@ -157,11 +157,6 @@ export function buildTreeLayout(
       deathDate: decedent.deathDate,
       isDecedent: true,
       isSelected: false,
-      onSelect,
-      onDelete,
-      onContextMenu,
-      onAddChild,
-      onAddSpouse,
     } satisfies PersonNodeData,
   });
 

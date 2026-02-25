@@ -6,8 +6,6 @@ import type { ValidationError } from '../validation';
 import type { Edge } from '@xyflow/react';
 import type { PersonNodeType } from '../../components/PersonNode';
 
-const noop = () => {};
-
 function makeDecedent(): Decedent {
   return { id: 'D', name: '被繼承人', deathDate: '2024-01-01' };
 }
@@ -21,8 +19,19 @@ function makePerson(
   return { id, name: id, relation, status, parentId };
 }
 
-function layout(persons: Person[], results: CalculationResult[] = [], selectedId: string | null = null, validationErrors: ValidationError[] = []) {
-  return buildTreeLayout(makeDecedent(), persons, results, selectedId, noop, noop, validationErrors, noop, noop, noop);
+function layout(
+  persons: Person[],
+  results: CalculationResult[] = [],
+  selectedId: string | null = null,
+  validationErrors: ValidationError[] = [],
+) {
+  return buildTreeLayout({
+    decedent: makeDecedent(),
+    persons,
+    results,
+    selectedId,
+    validationErrors,
+  });
 }
 
 function findNode(result: { nodes: PersonNodeType[]; edges: Edge[] }, id: string) {
