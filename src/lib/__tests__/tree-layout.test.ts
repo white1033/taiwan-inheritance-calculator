@@ -81,9 +81,9 @@ describe('tree-layout', () => {
     const f = findNode({ nodes, edges }, 'F');
     const m = findNode({ nodes, edges }, 'M');
     
-    // y = -(200 + 80) = -280
-    expect(f?.position.y).toBe(-280);
-    expect(m?.position.y).toBe(-280);
+    // y = -(200 + 160) = -360
+    expect(f?.position.y).toBe(-360);
+    expect(m?.position.y).toBe(-360);
     
     // Centered: F at -124, M at 124 (adjusted for NODE_WIDTH/2 = 104 in layout logic)
     // Actually, x is placed at parentCx - NODE_WIDTH/2
@@ -102,7 +102,7 @@ describe('tree-layout', () => {
     const f = findNode({ nodes, edges: [] }, 'F');
     // totalWidth = 208, cx = 0, x = -104
     expect(f?.position.x).toBe(-104);
-    expect(f?.position.y).toBe(-280);
+    expect(f?.position.y).toBe(-360);
   });
 
   test('Children: 2 子女 -> below decedent, evenly spread', () => {
@@ -110,9 +110,9 @@ describe('tree-layout', () => {
     const c1 = findNode({ nodes, edges }, 'C1');
     const c2 = findNode({ nodes, edges }, 'C2');
 
-    // y = 200 + 80 = 280
-    expect(c1?.position.y).toBe(280);
-    expect(c2?.position.y).toBe(280);
+    // y = 200 + 160 = 360
+    expect(c1?.position.y).toBe(360);
+    expect(c2?.position.y).toBe(360);
 
     expect(c1?.position.x).toBe(-228); // -124 - 104
     expect(c2?.position.x).toBe(20);   // 124 - 104
@@ -125,7 +125,7 @@ describe('tree-layout', () => {
     const { nodes } = layout([makePerson('C1', '子女')]);
     const c1 = findNode({ nodes, edges: [] }, 'C1');
     expect(c1?.position.x).toBe(-104);
-    expect(c1?.position.y).toBe(280);
+    expect(c1?.position.y).toBe(360);
   });
 
   test('Siblings: to the right of decedent, horizontal layout', () => {
@@ -152,9 +152,9 @@ describe('tree-layout', () => {
     ];
     const { nodes, edges } = layout(persons);
     
-    // y = -280 - 200 - 80 = -560
+    // y = -360 - 200 - 160 = -720
     const gf1 = findNode({ nodes, edges }, 'GF1');
-    expect(gf1?.position.y).toBe(-560);
+    expect(gf1?.position.y).toBe(-720);
     
     // Check connections
     expect(findEdge({ nodes, edges }, 'GF1', 'F')).toBeDefined();
@@ -179,9 +179,9 @@ describe('tree-layout', () => {
     const gc1 = findNode({ nodes, edges }, 'GC1');
     const gc2 = findNode({ nodes, edges }, 'GC2');
     
-    // nested y = childY + 280 = 560
-    expect(gc2?.position.y).toBe(560);
-    expect(gc1?.position.y).toBe(560);
+    // nested y = childY + 200 + 160 = 720
+    expect(gc2?.position.y).toBe(720);
+    expect(gc1?.position.y).toBe(720);
     
     // connection from C to GC1
     expect(findEdge({ nodes, edges }, 'C', 'GC1')).toBeDefined();
@@ -278,11 +278,11 @@ describe('tree-layout', () => {
     const gf2 = findNode({ nodes, edges: [] }, 'GF2');
     const gm2 = findNode({ nodes, edges: [] }, 'GM2');
 
-    // All grandparents at gpY = -560
-    expect(gf1?.position.y).toBe(-560);
-    expect(gm1?.position.y).toBe(-560);
-    expect(gf2?.position.y).toBe(-560);
-    expect(gm2?.position.y).toBe(-560);
+    // All grandparents at gpY = -720
+    expect(gf1?.position.y).toBe(-720);
+    expect(gm1?.position.y).toBe(-720);
+    expect(gf2?.position.y).toBe(-720);
+    expect(gm2?.position.y).toBe(-720);
 
     // All x positions must be unique (no overlapping)
     const xPositions = [gf1, gm1, gf2, gm2].map(n => n?.position.x);

@@ -9,7 +9,7 @@ const NODE_WIDTH = 208;
 const DECEDENT_NODE_WIDTH = 240;
 const NODE_HEIGHT = 200;
 const H_GAP = 40;
-const V_GAP = 80;
+const V_GAP = 160;
 const MAX_DEPTH = 20;
 
 export interface TreeLayoutOptions {
