@@ -27,7 +27,7 @@ interface LeftPanelProps {
 
 export function LeftPanel({ open, onClose }: LeftPanelProps) {
   const { state, dispatch } = useInheritance();
-  const hasSpouse = state.persons.some(p => p.relation === '配偶');
+  const existingRelations = new Set(state.persons.map(p => p.relation));
   const [selectedPresetIndex, setSelectedPresetIndex] = useState<number | null>(null);
 
   return (
@@ -159,7 +159,9 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
         </h2>
         <div className="grid grid-cols-2 gap-2">
           {HEIR_BUTTONS.map(({ label, relation }) => {
-            const disabled = relation === '配偶' && hasSpouse;
+            // 子女、兄弟姊妹可重複新增，其餘關係（配偶、父、母、祖父母等）只能有一個
+            const isSingular = relation !== '子女' && relation !== '兄弟姊妹';
+            const disabled = isSingular && existingRelations.has(relation);
             return (
               <Button
                 key={relation}

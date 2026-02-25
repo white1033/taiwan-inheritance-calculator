@@ -73,35 +73,35 @@ describe('tree-layout', () => {
     expect(edge?.style?.strokeWidth).toBe(2);
   });
 
-  test('Parents: 父+母 -> both above decedent, centered', () => {
+  test('Parents: 父+母 -> both above decedent, centered over decedent', () => {
     const { nodes, edges } = layout([makePerson('F', '父'), makePerson('M', '母')]);
     expect(nodes).toHaveLength(3); // D, F, M
     expect(edges).toHaveLength(2);
 
     const f = findNode({ nodes, edges }, 'F');
     const m = findNode({ nodes, edges }, 'M');
-    
+
     // y = -(200 + 160) = -360
     expect(f?.position.y).toBe(-360);
     expect(m?.position.y).toBe(-360);
-    
-    // Centered: F at -124, M at 124 (adjusted for NODE_WIDTH/2 = 104 in layout logic)
-    // Actually, x is placed at parentCx - NODE_WIDTH/2
+
+    // Parents centered over decedent visual center (NODE_WIDTH/2 = 104)
     // totalParentsWidth = 2 * 208 + 40 = 456
-    // parentCx for F = -228 + 104 = -124, so x = -124 - 104 = -228
-    expect(f?.position.x).toBe(-228);
-    // parentCx for M = -228 + 208 + 40 + 104 = 124, so x = 124 - 104 = 20
-    expect(m?.position.x).toBe(20);
+    // currentX = 104 - 228 = -124
+    // Father: parentCx = -124 + 104 = -20, x = -20 - 104 = -124
+    expect(f?.position.x).toBe(-124);
+    // Mother: parentCx = -124 + 208 + 40 + 104 = 228, x = 228 - 104 = 124
+    expect(m?.position.x).toBe(124);
 
     expect(findEdge({ nodes, edges }, 'F', 'D')).toBeDefined();
     expect(findEdge({ nodes, edges }, 'M', 'D')).toBeDefined();
   });
 
-  test('Single parent: just 父 -> above decedent, centered at 0', () => {
+  test('Single parent: just 父 -> above decedent, centered over decedent', () => {
     const { nodes } = layout([makePerson('F', '父')]);
     const f = findNode({ nodes, edges: [] }, 'F');
-    // totalWidth = 208, cx = 0, x = -104
-    expect(f?.position.x).toBe(-104);
+    // totalWidth = 208, currentX = 104 - 104 = 0, parentCx = 104, x = 104 - 104 = 0
+    expect(f?.position.x).toBe(0);
     expect(f?.position.y).toBe(-360);
   });
 
@@ -114,9 +114,10 @@ describe('tree-layout', () => {
     expect(c1?.position.y).toBe(360);
     expect(c2?.position.y).toBe(360);
 
-    expect(c1?.position.x).toBe(-228); // -124 - 104
-    expect(c2?.position.x).toBe(20);   // 124 - 104
-    
+    // Centered over decedent visual center (NODE_WIDTH/2 = 104)
+    expect(c1?.position.x).toBe(-124);
+    expect(c2?.position.x).toBe(124);
+
     expect(findEdge({ nodes, edges }, 'D', 'C1')).toBeDefined();
     expect(findEdge({ nodes, edges }, 'D', 'C2')).toBeDefined();
   });
@@ -124,7 +125,7 @@ describe('tree-layout', () => {
   test('Single child -> centered below decedent', () => {
     const { nodes } = layout([makePerson('C1', '子女')]);
     const c1 = findNode({ nodes, edges: [] }, 'C1');
-    expect(c1?.position.x).toBe(-104);
+    expect(c1?.position.x).toBe(0);
     expect(c1?.position.y).toBe(360);
   });
 
@@ -215,16 +216,16 @@ describe('tree-layout', () => {
       makePerson('CS', '子女之配偶', '一般繼承', 'C')
     ];
     const { nodes, edges } = layout(persons);
-    
+
     const c = findNode({ nodes, edges }, 'C');
     const cs = findNode({ nodes, edges }, 'CS');
-    
+
     // C is shifted right by (NODE_WIDTH+H_GAP)/2 = 124
-    // Base x for C without spouse is -104. So -104 + 124 = 20
-    expect(c?.position.x).toBe(20);
-    // CS is at c.cx - NODE_WIDTH/2 - H_GAP - NODE_WIDTH
-    // c.cx = 20 + 104 = 124. 124 - 104 - 40 - 208 = -228
-    expect(cs?.position.x).toBe(-228);
+    // Base cx for C = 104 (decedent center), with spouse offset: x = 104 + 124 - 104 = 124
+    expect(c?.position.x).toBe(124);
+    // CS is at personCx - NODE_WIDTH/2 - H_GAP - NODE_WIDTH
+    // personCx = 104 + 124 = 228. 228 - 104 - 40 - 208 = -124
+    expect(cs?.position.x).toBe(-124);
     expect(cs?.position.y).toBe(c?.position.y);
     
     const edge = findEdge({ nodes, edges }, 'C', 'CS');
@@ -277,11 +278,11 @@ describe('tree-layout', () => {
     // C1 requires width for 2 children = 208*2 + 40 = 456
     // C2 requires width for 1 child = 208
     // Total = 456 + 208 + 40 = 704
-    // Start X = -352
-    // c1.cx = -352 + 456/2 = -124 -> x = -124 - 104 = -228
-    expect(c1?.position.x).toBe(-228);
-    // c2.cx = -352 + 456 + 40 + 208/2 = 144 + 104 = 248 -> x = 248 - 104 = 144
-    expect(c2?.position.x).toBe(144);
+    // childX = 104 - 352 = -248
+    // c1.cx = -248 + 228 = -20 -> x = -20 - 104 = -124
+    expect(c1?.position.x).toBe(-124);
+    // c2.cx = -248 + 456 + 40 + 104 = 352 -> x = 352 - 104 = 248
+    expect(c2?.position.x).toBe(248);
   });
 
   test('Grandparents: all 4 grandparents have unique non-overlapping positions', () => {
@@ -311,11 +312,11 @@ describe('tree-layout', () => {
     const uniqueX = new Set(xPositions);
     expect(uniqueX.size).toBe(4);
 
-    // Exact positions: fatherCx=-248, motherCx=248
-    expect(gf1?.position.x).toBe(-580);
-    expect(gm1?.position.x).toBe(-332);
-    expect(gf2?.position.x).toBe(-84);
-    expect(gm2?.position.x).toBe(164);
+    // Exact positions: fatherCx=-144, motherCx=352 (shifted +104 for decedent center)
+    expect(gf1?.position.x).toBe(-476);
+    expect(gm1?.position.x).toBe(-228);
+    expect(gf2?.position.x).toBe(20);
+    expect(gm2?.position.x).toBe(268);
   });
 
   test('Siblings with spouse: siblings offset right past spouse', () => {

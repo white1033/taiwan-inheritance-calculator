@@ -227,7 +227,8 @@ export function buildTreeLayout(
       activeParents.reduce((sum, p) => sum + p.width, 0) +
       Math.max(0, activeParents.length - 1) * H_GAP;
 
-    let currentX = -totalParentsWidth / 2;
+    // Center parent group around decedent's visual center (NODE_WIDTH / 2)
+    let currentX = NODE_WIDTH / 2 - totalParentsWidth / 2;
 
     for (const parentGroup of activeParents) {
       const { node, width, gps } = parentGroup;
@@ -272,7 +273,7 @@ export function buildTreeLayout(
   if (!motherNode) orphanGps.push(...maternalGps);
   if (orphanGps.length > 0) {
     const gpGroupWidth = orphanGps.length * NODE_WIDTH + Math.max(0, orphanGps.length - 1) * H_GAP;
-    let currentX = -gpGroupWidth / 2;
+    let currentX = NODE_WIDTH / 2 - gpGroupWidth / 2;
     orphanGps.forEach((gp) => {
       addPersonNode(gp, currentX, gpY);
       edges.push({
@@ -295,7 +296,8 @@ export function buildTreeLayout(
   const totalChildWidth =
     directChildren.reduce((sum, c) => sum + subtreeWidth(c.id), 0) +
     Math.max(0, directChildren.length - 1) * H_GAP;
-  let childX = -totalChildWidth / 2;
+  // Center children around decedent's visual center (NODE_WIDTH / 2)
+  let childX = NODE_WIDTH / 2 - totalChildWidth / 2;
 
   for (const child of directChildren) {
     const w = subtreeWidth(child.id);
