@@ -61,8 +61,13 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Remove originals from the clone
   clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
 
-  // Inject patched CSS (oklch → transparent as a safe placeholder)
-  const patched = cssTexts.join('\n').replace(/oklch\([^)]*\)/gi, 'transparent');
+  // Inject patched CSS (oklch → hex via canvas conversion)
+  const patched = cssTexts.join('\n').replace(/oklch\([^)]*\)/gi, (match) => {
+    const ctx = getCtx();
+    ctx.fillStyle = '#000000';
+    ctx.fillStyle = match;
+    return ctx.fillStyle;
+  });
   const styleEl = clonedDoc.createElement('style');
   styleEl.textContent = patched;
   clonedDoc.head.appendChild(styleEl);
