@@ -1,4 +1,4 @@
-import { useReducer, type ReactNode } from 'react';
+import { useReducer, useMemo, type ReactNode } from 'react';
 import { InheritanceStateContext, InheritanceDispatchContext } from './InheritanceContextValue';
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
@@ -8,14 +8,19 @@ type Snapshot = { decedent: Decedent; persons: Person[] };
 
 const MAX_UNDO = 50;
 
-export interface State {
+/** Core state managed by the reducer (no derived data). */
+interface CoreState {
   decedent: Decedent;
   persons: Person[];
-  results: CalculationResult[];
   selectedPersonId: string | null;
-  validationErrors: ValidationError[];
   past: Snapshot[];
   future: Snapshot[];
+}
+
+/** Full state exposed to consumers (core + derived). */
+export interface State extends CoreState {
+  results: CalculationResult[];
+  validationErrors: ValidationError[];
 }
 
 export type Action =
@@ -56,39 +61,29 @@ function generateId(): string {
   return `p_${crypto.randomUUID()}`;
 }
 
-function computeDerived(decedent: Decedent, persons: Person[]) {
-  return {
-    results: calculateShares(decedent, persons),
-    validationErrors: validate(persons, decedent),
-  };
-}
-
-const EMPTY_STATE: State = {
+const EMPTY_CORE: CoreState = {
   decedent: { id: 'decedent', name: '' },
   persons: [],
-  results: [],
   selectedPersonId: null,
-  validationErrors: [],
   past: [],
   future: [],
 };
 
-function buildInitialState(): State {
+function buildInitialState(): CoreState {
   const saved = loadFromStorage();
   if (saved) {
     return {
       decedent: saved.decedent,
       persons: saved.persons,
-      ...computeDerived(saved.decedent, saved.persons),
       selectedPersonId: null,
       past: [],
       future: [],
     };
   }
-  return { ...EMPTY_STATE };
+  return { ...EMPTY_CORE };
 }
 
-function pushUndo(state: State): { past: Snapshot[]; future: Snapshot[] } {
+function pushUndo(state: CoreState): { past: Snapshot[]; future: Snapshot[] } {
   const snapshot: Snapshot = { decedent: state.decedent, persons: state.persons };
   return {
     past: [...state.past.slice(-(MAX_UNDO - 1)), snapshot],
@@ -96,12 +91,12 @@ function pushUndo(state: State): { past: Snapshot[]; future: Snapshot[] } {
   };
 }
 
-function reducer(state: State, action: Action): State {
+function reducer(state: CoreState, action: Action): CoreState {
   switch (action.type) {
     case 'SET_DECEDENT': {
       const history = pushUndo(state);
       const decedent = { ...state.decedent, ...action.payload };
-      const next = { ...state, ...history, decedent, ...computeDerived(decedent, state.persons) };
+      const next = { ...state, ...history, decedent };
       saveToStorage(next.decedent, next.persons);
       return next;
     }
@@ -118,7 +113,6 @@ function reducer(state: State, action: Action): State {
         ...state,
         ...history,
         persons,
-        ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
       saveToStorage(next.decedent, next.persons);
@@ -147,7 +141,6 @@ function reducer(state: State, action: Action): State {
         ...state,
         ...history,
         persons,
-        ...computeDerived(state.decedent, persons),
         selectedPersonId: newPerson.id,
       };
       saveToStorage(next.decedent, next.persons);
@@ -158,7 +151,7 @@ function reducer(state: State, action: Action): State {
       const persons = state.persons.map(p =>
         p.id === action.payload.id ? { ...p, ...action.payload.updates } : p
       );
-      const next = { ...state, ...history, persons, ...computeDerived(state.decedent, persons) };
+      const next = { ...state, ...history, persons };
       saveToStorage(next.decedent, next.persons);
       return next;
     }
@@ -179,7 +172,6 @@ function reducer(state: State, action: Action): State {
         ...state,
         ...history,
         persons,
-        ...computeDerived(state.decedent, persons),
         selectedPersonId:
           idsToDelete.has(state.selectedPersonId ?? '') ? null : state.selectedPersonId,
       };
@@ -196,7 +188,6 @@ function reducer(state: State, action: Action): State {
         ...history,
         decedent: action.payload.decedent,
         persons: action.payload.persons,
-        ...computeDerived(action.payload.decedent, action.payload.persons),
         selectedPersonId: null,
       };
       saveToStorage(next.decedent, next.persons);
@@ -208,7 +199,7 @@ function reducer(state: State, action: Action): State {
       } catch {
         // graceful degradation
       }
-      return { ...EMPTY_STATE };
+      return { ...EMPTY_CORE };
     }
     case 'UNDO': {
       if (state.past.length === 0) return state;
@@ -220,7 +211,6 @@ function reducer(state: State, action: Action): State {
         future: [...state.future, currentSnapshot],
         decedent: previous.decedent,
         persons: previous.persons,
-        ...computeDerived(previous.decedent, previous.persons),
         selectedPersonId: null,
       };
       saveToStorage(next.decedent, next.persons);
@@ -236,7 +226,6 @@ function reducer(state: State, action: Action): State {
         future: state.future.slice(0, -1),
         decedent: next_snapshot.decedent,
         persons: next_snapshot.persons,
-        ...computeDerived(next_snapshot.decedent, next_snapshot.persons),
         selectedPersonId: null,
       };
       saveToStorage(next.decedent, next.persons);
@@ -248,7 +237,24 @@ function reducer(state: State, action: Action): State {
 }
 
 export function InheritanceProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
+  const [coreState, dispatch] = useReducer(reducer, undefined, buildInitialState);
+
+  // Derived state: only recomputed when decedent or persons change,
+  // NOT on SELECT_PERSON or other non-data actions.
+  const results = useMemo(
+    () => calculateShares(coreState.decedent, coreState.persons),
+    [coreState.decedent, coreState.persons],
+  );
+  const validationErrors = useMemo(
+    () => validate(coreState.persons, coreState.decedent),
+    [coreState.persons, coreState.decedent],
+  );
+
+  const state: State = useMemo(
+    () => ({ ...coreState, results, validationErrors }),
+    [coreState, results, validationErrors],
+  );
+
   return (
     <InheritanceStateContext.Provider value={state}>
       <InheritanceDispatchContext.Provider value={dispatch}>
