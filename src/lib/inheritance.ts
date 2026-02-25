@@ -193,7 +193,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     }
 
     for (const holder of slotHolders) {
-      processSlotHolder(holder, perSlot, activeOrder, persons, results);
+      processSlotHolder(holder, perSlot, persons, results);
     }
   } else if (spouseShareType !== null && activeOrder !== null) {
     // Orders 2, 3, 4: spouse gets fixed share, others split remainder
@@ -214,7 +214,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     const numSlots = slotHolders.length;
     for (const holder of slotHolders) {
       const perSlot = numSlots > 0 ? divide(othersShare, frac(numSlots)) : ZERO;
-      processSlotHolder(holder, perSlot, activeOrder, persons, results);
+      processSlotHolder(holder, perSlot, persons, results);
     }
   } else if (spouseShareType !== null && activeOrder === null) {
     // Spouse alone
@@ -233,7 +233,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     const numSlots = slotHolders.length;
     for (const holder of slotHolders) {
       const perSlot = numSlots > 0 ? frac(1, numSlots) : ZERO;
-      processSlotHolder(holder, perSlot, activeOrder, persons, results);
+      processSlotHolder(holder, perSlot, persons, results);
     }
   }
 
@@ -266,123 +266,107 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
 }
 
 /**
+ * Push a zero-share result entry for a person.
+ */
+function pushZeroResult(person: Person, results: CalculationResult[]): void {
+  results.push({
+    id: person.id,
+    name: person.name,
+    relation: person.relation,
+    inheritanceShare: ZERO,
+    reservedShare: ZERO,
+  });
+}
+
+/**
+ * Push a result entry with the given share for a person.
+ */
+function pushShareResult(person: Person, share: Fraction, results: CalculationResult[]): void {
+  results.push({
+    id: person.id,
+    name: person.name,
+    relation: person.relation,
+    inheritanceShare: share,
+    reservedShare: multiply(share, reservedRatio(person.relation)),
+  });
+}
+
+/**
+ * Distribute a share among sub-heirs of a dead person.
+ *
+ * This handles the recursive case for both representation (代位) and
+ * re-transfer (再轉) inheritance: find direct sub-heirs, split the share
+ * equally, and recurse if any sub-heir also has their own sub-heirs.
+ *
+ * @param parentId  - The dead person whose share is being distributed
+ * @param share     - The share to distribute
+ * @param status    - The sub-heir status to look for ('代位繼承' or '再轉繼承')
+ * @param persons   - All persons in the case
+ * @param results   - Accumulator for calculation results
+ * @param visited   - Cycle detection set
+ */
+function distributeShare(
+  parentId: string,
+  share: Fraction,
+  status: '代位繼承' | '再轉繼承',
+  persons: Person[],
+  results: CalculationResult[],
+  visited: Set<string>,
+): void {
+  const subHeirs = persons.filter(
+    p => p.status === status && p.parentId === parentId
+  );
+
+  if (subHeirs.length === 0) return;
+
+  const perHeir = divide(share, frac(subHeirs.length));
+  for (const heir of subHeirs) {
+    if (visited.has(heir.id)) {
+      pushZeroResult(heir, results);
+      continue;
+    }
+    visited.add(heir.id);
+
+    // Check if this sub-heir also has their own sub-heirs (next level)
+    const hasOwnSubHeirs = persons.some(
+      p => p.status === status && p.parentId === heir.id
+    );
+
+    if (hasOwnSubHeirs) {
+      // This heir is dead with sub-heirs — record zero and recurse
+      pushZeroResult(heir, results);
+      distributeShare(heir.id, perHeir, status, persons, results, visited);
+    } else {
+      pushShareResult(heir, perHeir, results);
+    }
+  }
+}
+
+/**
  * Process a slot holder. If the holder is alive and active, they get the full slot share.
- * If the holder is dead with representation heirs, the slot share is split among them.
- * If the holder is a re-transfer origin, the slot share is split among their sub-heirs.
+ * If the holder is dead with representation heirs, the slot share is distributed among them.
+ * If the holder is a re-transfer origin, the slot share is distributed among their sub-heirs.
  */
 function processSlotHolder(
   holder: Person,
   slotShare: Fraction,
-  activeOrder: number | null,
   persons: Person[],
   results: CalculationResult[],
   visited = new Set<string>(),
 ): void {
   if (visited.has(holder.id)) {
-    results.push({
-      id: holder.id,
-      name: holder.name,
-      relation: holder.relation,
-      inheritanceShare: ZERO,
-      reservedShare: ZERO,
-    });
+    pushZeroResult(holder, results);
     return;
   }
   visited.add(holder.id);
 
   if (holder.status === '一般繼承') {
-    // Active heir gets full slot share
-    results.push({
-      id: holder.id,
-      name: holder.name,
-      relation: holder.relation,
-      inheritanceShare: slotShare,
-      reservedShare: multiply(slotShare, reservedRatio(holder.relation)),
-    });
+    pushShareResult(holder, slotShare, results);
   } else if (holder.status === '死亡' || holder.status === '死亡絕嗣') {
-    // Dead heir: check for representation heirs
-    const repHeirs = persons.filter(
-      p => p.status === '代位繼承' && p.parentId === holder.id
-    );
-
-    if (repHeirs.length > 0) {
-      // The dead holder gets zero; their share is split among representation heirs
-      results.push({
-        id: holder.id,
-        name: holder.name,
-        relation: holder.relation,
-        inheritanceShare: ZERO,
-        reservedShare: ZERO,
-      });
-
-      const perRep = divide(slotShare, frac(repHeirs.length));
-      for (const rep of repHeirs) {
-        const repSubHeirs = persons.filter(
-          p => p.status === '代位繼承' && p.parentId === rep.id
-        );
-        if (repSubHeirs.length > 0) {
-          // This rep heir is also dead with sub-heirs — recurse
-          processSlotHolder(
-            { ...rep, status: '死亡' } as Person,
-            perRep, activeOrder, persons, results, visited,
-          );
-        } else {
-          results.push({
-            id: rep.id,
-            name: rep.name,
-            relation: rep.relation,
-            inheritanceShare: perRep,
-            reservedShare: multiply(perRep, reservedRatio(rep.relation)),
-          });
-        }
-      }
-    } else {
-      // Dead with no representation heirs: slot is lost (zero share)
-      results.push({
-        id: holder.id,
-        name: holder.name,
-        relation: holder.relation,
-        inheritanceShare: ZERO,
-        reservedShare: ZERO,
-      });
-    }
+    pushZeroResult(holder, results);
+    distributeShare(holder.id, slotShare, '代位繼承', persons, results, visited);
   } else if (holder.status === '再轉繼承') {
-    // Re-transfer: heir died AFTER decedent. Their share goes to their own heirs.
-    const subHeirs = persons.filter(
-      p => p.status === '再轉繼承' && p.parentId === holder.id
-    );
-
-    // The re-transfer origin gets zero
-    results.push({
-      id: holder.id,
-      name: holder.name,
-      relation: holder.relation,
-      inheritanceShare: ZERO,
-      reservedShare: ZERO,
-    });
-
-    if (subHeirs.length > 0) {
-      const perSub = divide(slotShare, frac(subHeirs.length));
-      for (const sub of subHeirs) {
-        const subSubHeirs = persons.filter(
-          p => p.status === '再轉繼承' && p.parentId === sub.id
-        );
-        if (subSubHeirs.length > 0) {
-          // This sub-heir is also dead with their own sub-heirs — recurse
-          processSlotHolder(
-            { ...sub, status: '再轉繼承' } as Person,
-            perSub, activeOrder, persons, results, visited,
-          );
-        } else {
-          results.push({
-            id: sub.id,
-            name: sub.name,
-            relation: sub.relation,
-            inheritanceShare: perSub,
-            reservedShare: multiply(perSub, reservedRatio(sub.relation)),
-          });
-        }
-      }
-    }
+    pushZeroResult(holder, results);
+    distributeShare(holder.id, slotShare, '再轉繼承', persons, results, visited);
   }
 }
