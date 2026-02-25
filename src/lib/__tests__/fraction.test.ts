@@ -79,4 +79,24 @@ describe('Fraction', () => {
       expect(toString(frac(0, 1))).toBe('0');
     });
   });
+
+  describe('overflow protection', () => {
+    it('throws when result exceeds safe integer range', () => {
+      // 2^53 is beyond MAX_SAFE_INTEGER after GCD reduction
+      expect(() => frac(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER - 1)).not.toThrow();
+      // Direct construction with unsafe values
+      expect(() => frac(1, Number.MAX_SAFE_INTEGER + 1)).toThrow(/overflow/i);
+    });
+
+    it('handles large but reducible fractions safely', () => {
+      // 1000000 / 2000000 reduces to 1/2, should be fine
+      expect(frac(1000000, 2000000)).toEqual({ n: 1, d: 2 });
+    });
+
+    it('pre-reduces operations to avoid intermediate overflow', () => {
+      // multiply(1/large, large/1) should reduce cross-terms first
+      const large = 999999999;
+      expect(multiply(frac(1, large), frac(large, 1))).toEqual(frac(1, 1));
+    });
+  });
 });
