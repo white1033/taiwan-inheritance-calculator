@@ -133,9 +133,9 @@ describe('tree-layout', () => {
     const b1 = findNode({ nodes, edges }, 'B1');
     const b2 = findNode({ nodes, edges }, 'B2');
 
-    // siblingStartX = NODE_WIDTH + H_GAP * 2 = 208 + 80 = 288
-    expect(b1?.position.x).toBe(288);
-    expect(b2?.position.x).toBe(536);
+    // siblingStartX = decedentRightEdge + H_GAP = 224 + 40 = 264
+    expect(b1?.position.x).toBe(264);
+    expect(b2?.position.x).toBe(512);
     expect(b1?.position.y).toBe(0);
     expect(b2?.position.y).toBe(0);
 
@@ -326,8 +326,7 @@ describe('tree-layout', () => {
     const { nodes } = layout(persons);
 
     const b1 = findNode({ nodes, edges: [] }, 'B1');
-    // siblingStartX = NODE_WIDTH + H_GAP*2 + NODE_WIDTH + H_GAP = 536
-    // b1.x = 536 + 0 * (208+40) = 536
-    expect(b1?.position.x).toBe(536);
+    // siblingStartX = 224 + 40 = 264 (spouse is on the left, doesn't affect right)
+    expect(b1?.position.x).toBe(264);
   });
 });

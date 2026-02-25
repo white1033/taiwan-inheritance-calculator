@@ -319,7 +319,9 @@ export function buildTreeLayout(
   const siblingPersons = persons.filter(
     (p) => p.relation === '兄弟姊妹' && !p.parentId,
   );
-  const siblingStartX = NODE_WIDTH + H_GAP * 2 + (spouse ? NODE_WIDTH + H_GAP : 0);
+  // Decedent right edge + gap
+  const decedentRightEdge = -(DECEDENT_NODE_WIDTH - NODE_WIDTH) / 2 + DECEDENT_NODE_WIDTH;
+  const siblingStartX = decedentRightEdge + H_GAP;
   const siblingEdgeParent = fatherNode || motherNode;
   siblingPersons.forEach((sib, i) => {
     const x = siblingStartX + i * (NODE_WIDTH + H_GAP);
