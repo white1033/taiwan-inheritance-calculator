@@ -9,17 +9,26 @@
  *     This gives correct z-order: background → edges → nodes
  */
 
-// Shared canvas context for oklch → hex conversion
-const _cvs = document.createElement('canvas');
-const _ctx = _cvs.getContext('2d')!;
+// Lazy-initialized canvas context for oklch → hex conversion
+let _cvs: HTMLCanvasElement | null = null;
+let _ctx: CanvasRenderingContext2D | null = null;
+
+function getCtx(): CanvasRenderingContext2D {
+  if (!_ctx) {
+    _cvs = document.createElement('canvas');
+    _ctx = _cvs.getContext('2d')!;
+  }
+  return _ctx;
+}
 
 /** Replace every oklch(...) in a CSS value string with its hex equivalent. */
 function resolveOklch(value: string): string {
   if (!value || !value.includes('oklch')) return value;
+  const ctx = getCtx();
   return value.replace(/oklch\([^)]*\)/gi, (match) => {
-    _ctx.fillStyle = '#000000';
-    _ctx.fillStyle = match;
-    return _ctx.fillStyle;
+    ctx.fillStyle = '#000000';
+    ctx.fillStyle = match;
+    return ctx.fillStyle;
   });
 }
 
