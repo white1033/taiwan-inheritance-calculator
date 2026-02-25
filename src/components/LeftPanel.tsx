@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { useInheritance } from '../hooks/useInheritance';
 import { PersonEditor } from './PersonEditor';
 import type { Relation } from '../types/models';
 import { toString } from '../lib/fraction';
 import { PRESETS } from '../lib/presets';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Button } from './ui/Button';
 
 const HEIR_BUTTONS: { label: string; relation: Relation }[] = [
   { label: '+ 配偶', relation: '配偶' },
@@ -24,6 +28,7 @@ interface LeftPanelProps {
 export function LeftPanel({ open, onClose }: LeftPanelProps) {
   const { state, dispatch } = useInheritance();
   const hasSpouse = state.persons.some(p => p.relation === '配偶');
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState<number | null>(null);
 
   return (
     <div
@@ -55,27 +60,32 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
           範例案例
         </h2>
-        <select
-          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Select
           value=""
           onChange={(e) => {
             const presetIndex = parseInt(e.target.value, 10);
             if (!isNaN(presetIndex) && PRESETS[presetIndex]) {
               const { decedent, persons } = PRESETS[presetIndex];
               dispatch({ type: 'LOAD_PERSONS', payload: { decedent, persons } });
+              setSelectedPresetIndex(presetIndex);
             }
           }}
         >
           <option value="">-- 請選擇範例 --</option>
           {PRESETS.map((preset, index) => (
-            <option key={index} value={index}>
+            <option key={index} value={index} title={preset.description}>
               {preset.label}
             </option>
           ))}
-        </select>
-        <button
-          type="button"
-          className="w-full mt-2 px-3 py-2 text-sm border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+        </Select>
+        {selectedPresetIndex != null && PRESETS[selectedPresetIndex] && (
+          <p className="text-xs text-slate-500 mt-1">
+            {PRESETS[selectedPresetIndex].description}
+          </p>
+        )}
+        <Button
+          variant="danger"
+          className="w-full mt-2"
           onClick={() => {
             if (window.confirm('確定要清除所有資料嗎？')) {
               dispatch({ type: 'RESET_STATE' });
@@ -83,7 +93,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
           }}
         >
           清除所有資料
-        </button>
+        </Button>
       </section>
 
 
@@ -95,28 +105,26 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
         <div className="space-y-3">
           <div>
             <label htmlFor="decedent-name" className="block text-sm text-slate-600 mb-1">姓名</label>
-            <input
+            <Input
               id="decedent-name"
               type="text"
               value={state.decedent.name}
               onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { name: e.target.value } })}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="請輸入被繼承人姓名"
             />
           </div>
           <div>
             <label htmlFor="decedent-deathDate" className="block text-sm text-slate-600 mb-1">死亡日期</label>
-            <input
+            <Input
               id="decedent-deathDate"
               type="date"
               value={state.decedent.deathDate || ''}
               onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { deathDate: e.target.value } })}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
             <label htmlFor="decedent-estateAmount" className="block text-sm text-slate-600 mb-1">遺產總額（選填）</label>
-            <input
+            <Input
               id="decedent-estateAmount"
               type="number"
               min="0"
@@ -128,7 +136,6 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
                   payload: { estateAmount: val === '' ? undefined : Number(val) }
                 });
               }}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="例：10,000,000"
             />
           </div>
@@ -144,15 +151,14 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
           {HEIR_BUTTONS.map(({ label, relation }) => {
             const disabled = relation === '配偶' && hasSpouse;
             return (
-              <button
-                type="button"
+              <Button
                 key={relation}
                 onClick={() => { dispatch({ type: 'ADD_PERSON', payload: { relation } }); onClose(); }}
                 disabled={disabled}
-                className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[44px]"
+                className="min-h-[44px]"
               >
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -184,7 +190,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
                         約 {Math.round(state.decedent.estateAmount * r.inheritanceShare.n / r.inheritanceShare.d).toLocaleString()} 元
                       </div>
                     )}
-                    <div className="text-slate-400 font-mono text-xs">
+                    <div className="text-slate-500 font-mono text-xs">
                       特留分 {toString(r.reservedShare)}
                     </div>
                   </div>
