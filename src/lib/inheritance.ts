@@ -1,5 +1,5 @@
 import type { Fraction } from './fraction';
-import { frac, divide, multiply, ZERO } from './fraction';
+import { frac, subtract, divide, multiply, ZERO } from './fraction';
 import type { Person, Decedent, Relation } from '../types/models';
 import { getOrder } from '../types/models';
 
@@ -198,9 +198,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
   } else if (spouseShareType !== null && activeOrder !== null) {
     // Orders 2, 3, 4: spouse gets fixed share, others split remainder
     const spouseShare = spouseShareType as Fraction;
-    const remainder = frac(1, 1);
-    const othersTotal = { n: remainder.n * spouseShare.d - spouseShare.n * remainder.d, d: remainder.d * spouseShare.d };
-    const othersShare = frac(othersTotal.n, othersTotal.d); // 1 - spouseShare
+    const othersShare = subtract(frac(1, 1), spouseShare);
 
     if (spouse) {
       results.push({
