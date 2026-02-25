@@ -180,20 +180,25 @@ export function buildTreeLayout(
     } satisfies PersonNodeData,
   });
 
-  // Spouse of decedent (direct, no parentId)
-  const spouse = persons.find((p) => p.relation === '配偶' && !p.parentId);
-  if (spouse) {
-    addPersonNode(spouse, -(NODE_WIDTH + H_GAP), 0);
+  // Spouses of decedent (direct, no parentId) — stacked vertically left of decedent
+  const spouses = persons.filter((p) => p.relation === '配偶' && !p.parentId);
+  const SPOUSE_V_GAP = 40;
+  spouses.forEach((sp, i) => {
+    const sy = i * (NODE_HEIGHT + SPOUSE_V_GAP);
+    addPersonNode(sp, -(NODE_WIDTH + H_GAP), sy);
+    const isFormer = !!sp.divorceDate || sp.status === '死亡';
     edges.push({
-      id: `e-${decedent.id}-${spouse.id}`,
+      id: `e-${decedent.id}-${sp.id}`,
       source: decedent.id,
-      target: spouse.id,
+      target: sp.id,
       sourceHandle: 'left',
       targetHandle: 'right',
       type: 'straight',
-      style: { stroke: '#94a3b8', strokeWidth: 2 },
+      style: isFormer
+        ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '5,5' }
+        : { stroke: '#94a3b8', strokeWidth: 2 },
     });
-  }
+  });
 
   // Parents and Grandparents (Above)
   // First, gather all parents and grandparents

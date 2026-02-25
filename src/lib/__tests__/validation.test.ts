@@ -101,6 +101,15 @@ describe('validate', () => {
     expect(hasError(errors, '2', 'relation')).toBe(false);
   });
 
+  it('allows new spouse when existing spouse has status 死亡', () => {
+    const persons: Person[] = [
+      { id: '1', name: '前妻', relation: '配偶', status: '死亡', deathDate: '2020-01-01' },
+      { id: '2', name: '現任', relation: '配偶', status: '一般繼承' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'relation')).toBe(false);
+  });
+
   it('errors when two current spouses (no divorceDate)', () => {
     const persons: Person[] = [
       { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },

@@ -8,7 +8,7 @@ import { Button } from './ui/Button';
 
 /** Relations that can only appear once (not 子女 or 兄弟姊妹) */
 const SINGULAR_RELATIONS: ReadonlySet<Relation> = new Set([
-  '配偶', '父', '母', '祖父', '祖母', '外祖父', '外祖母', '子女之配偶',
+  '父', '母', '祖父', '祖母', '外祖父', '外祖母', '子女之配偶',
 ]);
 
 export function PersonEditor() {
@@ -34,9 +34,14 @@ export function PersonEditor() {
       .filter(p => p.id !== person.id && SINGULAR_RELATIONS.has(p.relation))
       .map(p => p.relation),
   );
+  const hasActiveRootSpouse = state.persons.some(
+    p => p.id !== person.id && p.relation === '配偶' && !p.parentId && !p.divorceDate && p.status !== '死亡'
+  );
   const availableRelations = RELATION_OPTIONS.filter(
     r => {
       if (r !== person.relation && occupiedSingularRelations.has(r)) return false;
+      // 配偶：只能在無現任配偶時選擇
+      if (r === '配偶' && r !== person.relation && hasActiveRootSpouse) return false;
       // 子女之配偶僅能由 sub-heir 使用（必須有 parentId）
       if (r === '子女之配偶' && !person.parentId) return false;
       return true;

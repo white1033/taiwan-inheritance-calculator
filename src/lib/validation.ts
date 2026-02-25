@@ -20,7 +20,7 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
     }
 
     if (p.relation === '配偶' || p.relation === '子女之配偶') {
-      if (!p.divorceDate) {
+      if (!p.divorceDate && p.status !== '死亡') {
         const key = p.parentId || '__root__';
         const count = (currentSpouseCount.get(key) ?? 0) + 1;
         currentSpouseCount.set(key, count);

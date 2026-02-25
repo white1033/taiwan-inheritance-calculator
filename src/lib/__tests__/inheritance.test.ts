@@ -453,6 +453,64 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Multiple Spouses (多配偶)', () => {
+    it('divorced former spouse + current spouse + children: only current spouse inherits', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2015-01-01' },
+        { id: '2', name: '現任妻', relation: '配偶', status: '一般繼承' },
+        { id: '3', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '4', name: '次子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+      expectShare(results, '現任妻', 1, 3);
+      expectShare(results, '長子', 1, 3);
+      expectShare(results, '次子', 1, 3);
+    });
+
+    it('deceased former spouse + current spouse + children: only current spouse inherits', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '死亡', deathDate: '2018-01-01' },
+        { id: '2', name: '現任妻', relation: '配偶', status: '一般繼承' },
+        { id: '3', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '4', name: '次子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+      expectShare(results, '現任妻', 1, 3);
+      expectShare(results, '長子', 1, 3);
+      expectShare(results, '次子', 1, 3);
+    });
+
+    it('two former spouses (divorced + dead) + current spouse: only current inherits', () => {
+      const persons: Person[] = [
+        { id: '1', name: '第一任', relation: '配偶', status: '死亡', deathDate: '2010-01-01' },
+        { id: '2', name: '第二任', relation: '配偶', status: '一般繼承', divorceDate: '2018-01-01' },
+        { id: '3', name: '第三任', relation: '配偶', status: '一般繼承' },
+        { id: '4', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '5', name: '次子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '第一任', 0, 1);
+      expectShare(results, '第二任', 0, 1);
+      expectShare(results, '第三任', 1, 3);
+      expectShare(results, '長子', 1, 3);
+      expectShare(results, '次子', 1, 3);
+    });
+
+    it('no current spouse (all former): children split everything', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2015-01-01' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+      expectShare(results, '長子', 1, 2);
+      expectShare(results, '次子', 1, 2);
+    });
+  });
+
   describe('Grandparent Scenarios (祖父母)', () => {
     it('spouse + paternal grandparents only: spouse 2/3, each grandparent 1/6', () => {
       const persons: Person[] = [
