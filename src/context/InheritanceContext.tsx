@@ -3,6 +3,7 @@ import { InheritanceStateContext, InheritanceDispatchContext } from './Inheritan
 import type { Person, Decedent, Relation } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
 import { validate, type ValidationError } from '../lib/validation';
+import { readHashState } from '../lib/url-state';
 
 type Snapshot = { decedent: Decedent; persons: Person[] };
 
@@ -70,6 +71,19 @@ const EMPTY_CORE: CoreState = {
 };
 
 function buildInitialState(): CoreState {
+  // Priority: URL hash > localStorage
+  const hashState = readHashState();
+  if (hashState) {
+    // Clear the hash after loading to avoid re-loading on refresh
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    return {
+      decedent: hashState.decedent,
+      persons: hashState.persons,
+      selectedPersonId: null,
+      past: [],
+      future: [],
+    };
+  }
   const saved = loadFromStorage();
   if (saved) {
     return {
