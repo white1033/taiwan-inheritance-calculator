@@ -75,6 +75,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       }
     }
 
+    // 根配偶不應有 parentId（配偶不屬於繼承順位，不可為代位/再轉 sub-heir）
+    if (p.relation === '配偶' && p.parentId) {
+      errors.push({ personId: p.id, field: 'parentId', message: '配偶不可作為代位或再轉繼承人' });
+    }
+
     // 1-5: 離婚配偶警告
     if (p.relation === '配偶' && p.divorceDate && p.status === '一般繼承') {
       errors.push({ personId: p.id, field: 'divorceDate', message: '已離婚之配偶不具繼承權，應繼分將為零' });

@@ -242,12 +242,15 @@ export function InheritanceProvider({ children }: { children: ReactNode }) {
 
   // Load state from URL hash asynchronously (takes priority over localStorage)
   useEffect(() => {
+    let cancelled = false;
     readHashState().then(hashState => {
+      if (cancelled) return;
       if (hashState) {
         dispatch({ type: 'LOAD_PERSONS', payload: hashState });
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     });
+    return () => { cancelled = true; };
   }, []);
 
   // Derived state: only recomputed when decedent or persons change,

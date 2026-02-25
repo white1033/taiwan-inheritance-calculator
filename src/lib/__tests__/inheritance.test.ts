@@ -507,6 +507,61 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Cascade Renunciation (全拋棄級聯)', () => {
+    it('orders 1-3 all renounce → order 4 inherits', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '拋棄繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '拋棄繼承' },
+        { id: '4', name: '父親', relation: '父', status: '拋棄繼承' },
+        { id: '5', name: '母親', relation: '母', status: '拋棄繼承' },
+        { id: '6', name: '兄', relation: '兄弟姊妹', status: '拋棄繼承' },
+        { id: '7', name: '祖父', relation: '祖父', status: '一般繼承' },
+        { id: '8', name: '祖母', relation: '祖母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 2, 3);
+      expectShare(results, '祖父', 1, 6);
+      expectShare(results, '祖母', 1, 6);
+      expectShare(results, '長子', 0, 1);
+      expectShare(results, '父親', 0, 1);
+      expectShare(results, '兄', 0, 1);
+    });
+
+    it('all 4 orders renounce → only spouse inherits all', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '拋棄繼承' },
+        { id: '3', name: '父親', relation: '父', status: '拋棄繼承' },
+        { id: '4', name: '兄', relation: '兄弟姊妹', status: '拋棄繼承' },
+        { id: '5', name: '祖父', relation: '祖父', status: '拋棄繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 1, 1);
+      expectShare(results, '長子', 0, 1);
+      expectShare(results, '父親', 0, 1);
+      expectShare(results, '兄', 0, 1);
+      expectShare(results, '祖父', 0, 1);
+    });
+  });
+
+  describe('Re-transfer with only 子女之配偶 sub-heir', () => {
+    it('子女之配偶 inherits through re-transfer as sub-heir', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '再轉繼承', deathDate: '2024-03-01' },
+        { id: '4', name: '次媳', relation: '子女之配偶', status: '再轉繼承', parentId: '3' },
+      ];
+      const results = calculateShares(decedent, persons);
+      // 子女之配偶 counts as re-transfer sub-heir and receives the slot share
+      expectShare(results, '配偶A', 1, 3);
+      expectShare(results, '長子', 1, 3);
+      expectShare(results, '次子', 0, 1);
+      expectShare(results, '次媳', 1, 3);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);

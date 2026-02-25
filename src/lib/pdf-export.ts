@@ -10,13 +10,11 @@
  */
 
 // Lazy-initialized canvas context for oklch → hex conversion
-let _cvs: HTMLCanvasElement | null = null;
 let _ctx: CanvasRenderingContext2D | null = null;
 
 function getCtx(): CanvasRenderingContext2D {
   if (!_ctx) {
-    _cvs = document.createElement('canvas');
-    _ctx = _cvs.getContext('2d')!;
+    _ctx = document.createElement('canvas').getContext('2d')!;
   }
   return _ctx;
 }
@@ -275,5 +273,8 @@ export async function printPage(elementId: string) {
   const img = doc.createElement('img');
   img.src = dataUrl;
   img.onload = () => { win.print(); win.close(); };
+  img.onerror = () => {
+    win.document.body.textContent = '圖片載入失敗，請關閉此視窗後重試';
+  };
   doc.body.appendChild(img);
 }

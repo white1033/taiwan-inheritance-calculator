@@ -202,6 +202,37 @@ describe('validate', () => {
     expect(errors.some(e => e.personId === '1' && e.message.includes('晚於'))).toBe(true);
   });
 
+  it('errors when root 配偶 has parentId', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+      { id: '2', name: '配偶', relation: '配偶', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+    expect(errors.some(e => e.personId === '2' && e.message.includes('配偶'))).toBe(true);
+  });
+
+  it('allows same-day death for 代位繼承 (boundary case)', () => {
+    // deathDate === decedent.deathDate → 不報錯 (> 不含 =)
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡', deathDate: '2024-01-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    // 同一天死亡不觸發「應早於」錯誤
+    expect(errors.filter(e => e.personId === '1' && e.field === 'deathDate' && e.message.includes('早於'))).toHaveLength(0);
+  });
+
+  it('errors for 再轉繼承 origin with same-day death as decedent', () => {
+    // deathDate === decedent.deathDate → <= 觸發報錯
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'deathDate')).toBe(true);
+    expect(errors.some(e => e.personId === '1' && e.message.includes('晚於'))).toBe(true);
+  });
+
   it('per-person current spouse uniqueness with parentId', () => {
     const persons: Person[] = [
       { id: '1', name: 'X', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
