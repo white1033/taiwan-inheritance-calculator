@@ -16,71 +16,95 @@ const STATUSES: InheritanceStatus[] = [
   '一般繼承', '死亡', '死亡絕嗣', '拋棄繼承', '代位繼承', '再轉繼承',
 ];
 
-interface CompactPerson {
-  i: string;   // id
-  n: string;   // name
-  r: number;   // relation index
-  s: number;   // status index
-  b?: string;  // birthDate
-  x?: string;  // deathDate
-  m?: string;  // marriageDate
-  v?: string;  // divorceDate
-  p?: string;  // parentId
-}
+// Compact person: [name, relation, status, birthDate?, deathDate?, marriageDate?, divorceDate?, parentIndex?]
+// parentIndex is the index into the persons array (-1 or omitted = no parent)
+// Dates stored as "YYYYMMDD" (no dashes)
+type CompactPerson = [string, number, number, ...Array<string | number>];
 
 interface CompactState {
-  d: { i: string; n: string; x?: string; e?: number };  // decedent
-  p: CompactPerson[];                                     // persons
+  d: [string, string?, number?];  // [name, deathDate?, estateAmount?]
+  p: CompactPerson[];
+}
+
+function packDate(d: string): string {
+  return d.replace(/-/g, '');
+}
+
+function unpackDate(d: string): string {
+  // "20240515" → "2024-05-15"
+  return d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8);
 }
 
 function toCompact(state: ShareState): CompactState {
+  // Build id→index map for parentId references
+  const idToIdx = new Map<string, number>();
+  state.persons.forEach((p, i) => idToIdx.set(p.id, i));
+
+  const d: CompactState['d'] = [state.decedent.name];
+  if (state.decedent.deathDate) d[1] = packDate(state.decedent.deathDate);
+  if (state.decedent.estateAmount) d[2] = state.decedent.estateAmount;
+
   return {
-    d: {
-      i: state.decedent.id,
-      n: state.decedent.name,
-      ...(state.decedent.deathDate && { x: state.decedent.deathDate }),
-      ...(state.decedent.estateAmount && { e: state.decedent.estateAmount }),
-    },
+    d,
     p: state.persons.map(p => {
-      const c: CompactPerson = {
-        i: p.id,
-        n: p.name,
-        r: RELATIONS.indexOf(p.relation),
-        s: STATUSES.indexOf(p.status),
-      };
-      if (p.birthDate) c.b = p.birthDate;
-      if (p.deathDate) c.x = p.deathDate;
-      if (p.marriageDate) c.m = p.marriageDate;
-      if (p.divorceDate) c.v = p.divorceDate;
-      if (p.parentId) c.p = p.parentId;
+      const c: CompactPerson = [
+        p.name,
+        RELATIONS.indexOf(p.relation),
+        STATUSES.indexOf(p.status),
+      ];
+      // Optional fields packed in order: birthDate, deathDate, marriageDate, divorceDate, parentIndex
+      // Use "" for missing intermediate fields to preserve positional encoding
+      const b = p.birthDate ? packDate(p.birthDate) : '';
+      const x = p.deathDate ? packDate(p.deathDate) : '';
+      const m = p.marriageDate ? packDate(p.marriageDate) : '';
+      const v = p.divorceDate ? packDate(p.divorceDate) : '';
+      const pi = p.parentId != null ? idToIdx.get(p.parentId) ?? -1 : -1;
+
+      // Trim trailing empty/default values
+      const tail: Array<string | number> = [b, x, m, v, pi];
+      while (tail.length > 0 && (tail[tail.length - 1] === '' || tail[tail.length - 1] === -1)) {
+        tail.pop();
+      }
+      c.push(...tail);
       return c;
     }),
   };
 }
 
 function fromCompact(compact: CompactState): ShareState {
-  return {
-    decedent: {
-      id: compact.d.i,
-      name: compact.d.n,
-      ...(compact.d.x && { deathDate: compact.d.x }),
-      ...(compact.d.e && { estateAmount: compact.d.e }),
-    },
-    persons: compact.p.map(c => {
-      const p: Person = {
-        id: c.i,
-        name: c.n,
-        relation: RELATIONS[c.r],
-        status: STATUSES[c.s],
-      };
-      if (c.b) p.birthDate = c.b;
-      if (c.x) p.deathDate = c.x;
-      if (c.m) p.marriageDate = c.m;
-      if (c.v) p.divorceDate = c.v;
-      if (c.p) p.parentId = c.p;
-      return p;
-    }),
+  // First pass: create persons with temporary sequential IDs
+  const ids = compact.p.map(() => `p_${crypto.randomUUID()}`);
+  const decedentId = `d_${crypto.randomUUID()}`;
+
+  const dd = compact.d;
+  const decedent: Decedent = {
+    id: decedentId,
+    name: dd[0],
+    ...(dd[1] && { deathDate: unpackDate(dd[1]) }),
+    ...(dd[2] != null && { estateAmount: dd[2] }),
   };
+
+  const persons: Person[] = compact.p.map((c, i) => {
+    const p: Person = {
+      id: ids[i],
+      name: c[0] as string,
+      relation: RELATIONS[c[1] as number],
+      status: STATUSES[c[2] as number],
+    };
+    const b = c[3] as string | undefined;
+    const x = c[4] as string | undefined;
+    const m = c[5] as string | undefined;
+    const v = c[6] as string | undefined;
+    const pi = c[7] as number | undefined;
+    if (b) p.birthDate = unpackDate(b);
+    if (x) p.deathDate = unpackDate(x);
+    if (m) p.marriageDate = unpackDate(m);
+    if (v) p.divorceDate = unpackDate(v);
+    if (pi != null && pi >= 0 && pi < ids.length) p.parentId = ids[pi];
+    return p;
+  });
+
+  return { decedent, persons };
 }
 
 // --- Base64url helpers ---
