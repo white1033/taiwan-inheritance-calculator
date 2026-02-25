@@ -10,6 +10,7 @@ import '@xyflow/react/dist/style.css';
 import { useInheritance } from '../hooks/useInheritance.ts';
 import { PersonNode } from './PersonNode.tsx';
 import { buildTreeLayout } from '../lib/tree-layout.ts';
+import { countDescendants } from '../lib/person-utils.ts';
 import { NodeContextMenu } from './NodeContextMenu.tsx';
 import { TreeActionsContext, type TreeActions } from '../context/TreeActionsContext.tsx';
 
@@ -41,11 +42,7 @@ export function FamilyTree() {
 
   const onDelete = useCallback(
     (id: string) => {
-      function countDescendants(personId: string): number {
-        const children = state.persons.filter(p => p.parentId === personId);
-        return children.reduce((sum, c) => sum + 1 + countDescendants(c.id), 0);
-      }
-      const descendantCount = countDescendants(id);
+      const descendantCount = countDescendants(id, state.persons);
       const person = state.persons.find(p => p.id === id);
       const name = person?.name || '(未命名)';
 

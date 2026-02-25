@@ -9,6 +9,7 @@ const NODE_WIDTH = 208;
 const NODE_HEIGHT = 200;
 const H_GAP = 40;
 const V_GAP = 80;
+const MAX_DEPTH = 20;
 
 export interface TreeLayoutOptions {
   decedent: Decedent;
@@ -74,7 +75,8 @@ export function buildTreeLayout(
   const widthCache = new Map<string, number>();
 
   /** Calculate the width needed by a person and all their descendants */
-  function subtreeWidth(personId: string): number {
+  function subtreeWidth(personId: string, depth = 0): number {
+    if (depth >= MAX_DEPTH) return NODE_WIDTH;
     const cached = widthCache.get(personId);
     if (cached !== undefined) return cached;
 
@@ -87,7 +89,7 @@ export function buildTreeLayout(
       return selfWidth;
     }
     const childrenWidth = childPersons.reduce(
-      (sum, c) => sum + subtreeWidth(c.id),
+      (sum, c) => sum + subtreeWidth(c.id, depth + 1),
       0,
     );
     const result = Math.max(
@@ -99,7 +101,8 @@ export function buildTreeLayout(
   }
 
   /** Recursively layout a person's sub-heirs */
-  function layoutSubtree(personId: string, cx: number, y: number) {
+  function layoutSubtree(personId: string, cx: number, y: number, depth = 0) {
+    if (depth >= MAX_DEPTH) return;
     // Find spouse of this person (子女之配偶 with matching parentId)
     const personSpouse = persons.find(
       (p) => p.parentId === personId && p.relation === '子女之配偶',
@@ -148,7 +151,7 @@ export function buildTreeLayout(
               : undefined,
       });
       // Recurse
-      layoutSubtree(child.id, childCx, childY);
+      layoutSubtree(child.id, childCx, childY, depth + 1);
       currentX += w + H_GAP;
     }
   }

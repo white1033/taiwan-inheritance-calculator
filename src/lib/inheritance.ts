@@ -137,7 +137,8 @@ function getSpouseFixedShare(activeOrder: number | null): Fraction | 'equal' {
  * - Re-transfer inheritance (再轉繼承)
  * - Art. 1223: Reserved shares (特留分)
  */
-export function calculateShares(_decedent: Decedent, persons: Person[]): CalculationResult[] {
+export function calculateShares(decedent: Decedent, persons: Person[]): CalculationResult[] {
+  void decedent; // reserved for future use (e.g., deathDate-based logic)
   if (persons.length === 0) return [];
 
   // Find the spouse (if any)
@@ -175,6 +176,8 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
 
   // Build results
   const results: CalculationResult[] = [];
+  // Shared visited set prevents duplicate results when paths converge
+  const visited = new Set<string>();
 
   // Calculate shares
   if (spouseShareType === 'equal') {
@@ -193,7 +196,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     }
 
     for (const holder of slotHolders) {
-      processSlotHolder(holder, perSlot, persons, results);
+      processSlotHolder(holder, perSlot, persons, results, visited);
     }
   } else if (spouseShareType !== null && activeOrder !== null) {
     // Orders 2, 3, 4: spouse gets fixed share, others split remainder
@@ -214,7 +217,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     const numSlots = slotHolders.length;
     for (const holder of slotHolders) {
       const perSlot = numSlots > 0 ? divide(othersShare, frac(numSlots)) : ZERO;
-      processSlotHolder(holder, perSlot, persons, results);
+      processSlotHolder(holder, perSlot, persons, results, visited);
     }
   } else if (spouseShareType !== null && activeOrder === null) {
     // Spouse alone
@@ -233,14 +236,15 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
     const numSlots = slotHolders.length;
     for (const holder of slotHolders) {
       const perSlot = numSlots > 0 ? frac(1, numSlots) : ZERO;
-      processSlotHolder(holder, perSlot, persons, results);
+      processSlotHolder(holder, perSlot, persons, results, visited);
     }
   }
 
   // Add zero-share entries for all persons not yet in results
   // (e.g., renounced heirs, dead heirs whose slot was processed)
+  const resultIds = new Set(results.map(r => r.id));
   for (const p of persons) {
-    if (!results.find(r => r.id === p.id)) {
+    if (!resultIds.has(p.id)) {
       results.push({
         id: p.id,
         name: p.name,

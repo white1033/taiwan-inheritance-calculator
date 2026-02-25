@@ -84,7 +84,7 @@ export function fromExcelData(rows: ExcelRow[]): { decedent: Decedent; persons: 
     let parentId: string | undefined;
     if (parentRefValue !== '' && parentRefValue != null) {
       const parentNum = Number(parentRefValue);
-      if (!isNaN(parentNum) && parentNum >= 1) {
+      if (!isNaN(parentNum) && parentNum >= 1 && parentNum <= rows.length) {
         parentId = `imported_${parentNum - 1}`;
       }
     }

@@ -150,6 +150,14 @@ describe('url-state', () => {
     expect(decoded!.persons).toHaveLength(0);
   });
 
+  it('preserves estateAmount of 0 in round-trip', async () => {
+    const decedentZero: Decedent = { id: 'd', name: '測試', estateAmount: 0 };
+    const encoded = await encodeState(decedentZero, []);
+    const decoded = await decodeState(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.decedent.estateAmount).toBe(0);
+  });
+
   it('preserves divorceDate in round-trip', async () => {
     const personsWithDivorce: Person[] = [
       { id: 'p1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-05-15' },

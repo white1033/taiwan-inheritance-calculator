@@ -66,6 +66,20 @@ describe('Fraction', () => {
     it('returns false for unequal fractions', () => {
       expect(equals(frac(1, 3), frac(1, 4))).toBe(false);
     });
+    it('handles large denominators without overflow', () => {
+      // With cross-multiplication, 1 * 999999937 and 1 * 999999929 would
+      // still fit, but test the path to ensure reduce-based comparison works
+      const a = frac(1, 999999937);
+      const b = frac(1, 999999937);
+      expect(equals(a, b)).toBe(true);
+      expect(equals(a, frac(1, 999999929))).toBe(false);
+    });
+    it('compares unsimplified raw fractions correctly', () => {
+      // Manually construct unsimplified fractions (bypass frac())
+      const a = { n: 2, d: 6 };
+      const b = { n: 3, d: 9 };
+      expect(equals(a, b)).toBe(true);
+    });
   });
 
   describe('toString', () => {

@@ -94,6 +94,26 @@ describe('Excel data conversion', () => {
     expect(imported[2].name).toBe('正常');
   });
 
+  it('ignores out-of-range parentId references', () => {
+    const rowsWithBadRef = [
+      {
+        編號: 1,
+        稱謂: '子女',
+        繼承人: '測試人',
+        被繼承人: '被繼承人',
+        繼承狀態: '代位繼承',
+        被代位者: 999 as string | number,
+        出生日期: '',
+        死亡日期: '',
+        結婚日期: '',
+        離婚日期: '',
+        被繼承人死亡日期: '',
+      },
+    ];
+    const { persons: imported } = fromExcelData(rowsWithBadRef);
+    expect(imported[0].parentId).toBeUndefined();
+  });
+
   it('falls back to defaults for invalid relation and status values', () => {
     const invalidRows = [
       {

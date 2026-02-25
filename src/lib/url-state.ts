@@ -42,7 +42,7 @@ function toCompact(state: ShareState): CompactState {
 
   const d: CompactState['d'] = [state.decedent.name];
   if (state.decedent.deathDate) d[1] = packDate(state.decedent.deathDate);
-  if (state.decedent.estateAmount) d[2] = state.decedent.estateAmount;
+  if (state.decedent.estateAmount != null) d[2] = state.decedent.estateAmount;
 
   return {
     d,

@@ -65,7 +65,11 @@ export function divide(a: Fraction, b: Fraction): Fraction {
 }
 
 export function equals(a: Fraction, b: Fraction): boolean {
-  return a.n * b.d === b.n * a.d;
+  // Compare via reduced forms to avoid cross-multiplication overflow
+  // (a.n * b.d can exceed Number.MAX_SAFE_INTEGER for deep inheritance trees)
+  const sa = simplify(a.n, a.d);
+  const sb = simplify(b.n, b.d);
+  return sa.n === sb.n && sa.d === sb.d;
 }
 
 export function toString(f: Fraction): string {

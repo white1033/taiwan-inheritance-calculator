@@ -1,6 +1,7 @@
 import { useInheritance } from '../hooks/useInheritance';
 import { INHERITANCE_STATUS_OPTIONS, RELATION_OPTIONS } from '../types/models';
 import type { Person } from '../types/models';
+import { countDescendants } from '../lib/person-utils';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
@@ -182,11 +183,7 @@ export function PersonEditor() {
           variant="danger"
           className="w-full mt-2"
           onClick={() => {
-            function countDescendants(personId: string): number {
-              const children = state.persons.filter(p => p.parentId === personId);
-              return children.reduce((sum, c) => sum + 1 + countDescendants(c.id), 0);
-            }
-            const descendantCount = countDescendants(person.id);
+            const descendantCount = countDescendants(person.id, state.persons);
             if (descendantCount > 0) {
               if (!window.confirm(`刪除「${person.name || '(未命名)'}」將同時刪除其下 ${descendantCount} 位繼承人，是否確定？`)) return;
             }
