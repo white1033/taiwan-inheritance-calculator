@@ -42,6 +42,7 @@ export function ExportToolbar() {
     try {
       const result = await importFromExcel(file);
       dispatch({ type: 'LOAD_PERSONS', payload: result });
+      toast(`已匯入 ${result.persons.length} 位繼承人`, 'success');
     } catch (err) {
       toast('匯入失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }

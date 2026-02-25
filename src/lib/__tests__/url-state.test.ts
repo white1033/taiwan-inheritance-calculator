@@ -60,6 +60,96 @@ describe('url-state', () => {
     expect(encoded.startsWith('2')).toBe(true);
   });
 
+  it('rejects compact data with out-of-range relation index', async () => {
+    // Manually craft a v1 JSON with valid structure but will test v2 compact path
+    // We test by crafting a valid compressed payload with bad indices
+    const badCompact = { d: ['test'], p: [['name', 99, 0]] };
+    const json = JSON.stringify(badCompact);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const result = await decodeState('2' + b64);
+    expect(result).toBeNull();
+  });
+
+  it('decodes v1 format (full JSON compressed)', async () => {
+    // Create a v1 payload: "1" + compressed full JSON
+    const state = {
+      decedent: { id: 'd1', name: '測試人' },
+      persons: [{ id: 'p1', name: '子A', relation: '子女', status: '一般繼承' }],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const decoded = await decodeState('1' + b64);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.decedent.name).toBe('測試人');
+    expect(decoded!.persons).toHaveLength(1);
+    expect(decoded!.persons[0].name).toBe('子A');
+  });
+
+  it('decodes legacy format (uncompressed full JSON)', async () => {
+    const state = {
+      decedent: { id: 'd1', name: '遺產人' },
+      persons: [],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    let binary = '';
+    for (const byte of raw) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // Legacy format: no prefix, just base64url
+    const decoded = await decodeState(b64);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.decedent.name).toBe('遺產人');
+    expect(decoded!.persons).toHaveLength(0);
+  });
+
   it('preserves divorceDate in round-trip', async () => {
     const personsWithDivorce: Person[] = [
       { id: 'p1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-05-15' },

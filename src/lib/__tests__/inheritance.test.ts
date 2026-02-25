@@ -453,6 +453,60 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Grandparent Scenarios (祖父母)', () => {
+    it('spouse + paternal grandparents only: spouse 2/3, each grandparent 1/6', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '祖父', relation: '祖父', status: '一般繼承' },
+        { id: '3', name: '祖母', relation: '祖母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 2, 3);
+      expectShare(results, '祖父', 1, 6);
+      expectShare(results, '祖母', 1, 6);
+    });
+
+    it('spouse + maternal grandparents only: spouse 2/3, each grandparent 1/6', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '外祖父', relation: '外祖父', status: '一般繼承' },
+        { id: '3', name: '外祖母', relation: '外祖母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 2, 3);
+      expectShare(results, '外祖父', 1, 6);
+      expectShare(results, '外祖母', 1, 6);
+    });
+
+    it('all 4 grandparents: each gets 1/4', () => {
+      const persons: Person[] = [
+        { id: '1', name: '祖父', relation: '祖父', status: '一般繼承' },
+        { id: '2', name: '祖母', relation: '祖母', status: '一般繼承' },
+        { id: '3', name: '外祖父', relation: '外祖父', status: '一般繼承' },
+        { id: '4', name: '外祖母', relation: '外祖母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '祖父', 1, 4);
+      expectShare(results, '祖母', 1, 4);
+      expectShare(results, '外祖父', 1, 4);
+      expectShare(results, '外祖母', 1, 4);
+    });
+
+    it('spouse + mixed paternal/maternal (3 grandparents): spouse 2/3, each grandparent 1/9', () => {
+      const persons: Person[] = [
+        { id: '1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '祖父', relation: '祖父', status: '一般繼承' },
+        { id: '3', name: '外祖父', relation: '外祖父', status: '一般繼承' },
+        { id: '4', name: '外祖母', relation: '外祖母', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶A', 2, 3);
+      expectShare(results, '祖父', 1, 9);
+      expectShare(results, '外祖父', 1, 9);
+      expectShare(results, '外祖母', 1, 9);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);

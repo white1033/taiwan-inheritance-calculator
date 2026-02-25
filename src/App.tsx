@@ -15,7 +15,7 @@ function AppContent() {
   return (
     <ToastProvider>
       <div id="app-root" className="h-screen flex flex-col">
-        <Header onTogglePanel={togglePanel} />
+        <Header onTogglePanel={togglePanel} panelOpen={panelOpen} />
         <div className="flex-1 flex overflow-hidden relative">
           <LeftPanel open={panelOpen} onClose={closePanel} />
           {panelOpen && (

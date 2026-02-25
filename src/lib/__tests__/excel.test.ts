@@ -77,6 +77,23 @@ describe('Excel data conversion', () => {
     expect(rows[4]['繼承人']).toBe('正常名字');
   });
 
+  it('strips formula escape prefix on re-import', () => {
+    const dangerousPersons: Person[] = [
+      { id: '1', name: '=SUM(A1)', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '+cmd', relation: '子女', status: '一般繼承' },
+      { id: '3', name: '正常', relation: '子女', status: '一般繼承' },
+    ];
+    const rows = toExcelData(decedent, dangerousPersons);
+    // Export escapes them
+    expect(rows[0]['繼承人']).toBe("'=SUM(A1)");
+    expect(rows[1]['繼承人']).toBe("'+cmd");
+    // Re-import should strip the escape
+    const { persons: imported } = fromExcelData(rows);
+    expect(imported[0].name).toBe('=SUM(A1)');
+    expect(imported[1].name).toBe('+cmd');
+    expect(imported[2].name).toBe('正常');
+  });
+
   it('falls back to defaults for invalid relation and status values', () => {
     const invalidRows = [
       {

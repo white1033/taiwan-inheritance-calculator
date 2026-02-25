@@ -182,9 +182,13 @@ export function PersonEditor() {
           variant="danger"
           className="w-full mt-2"
           onClick={() => {
-            const descendants = state.persons.filter(p => p.parentId === person.id);
-            if (descendants.length > 0) {
-              if (!window.confirm(`刪除「${person.name || '(未命名)'}」將同時刪除其下繼承人，是否確定？`)) return;
+            function countDescendants(personId: string): number {
+              const children = state.persons.filter(p => p.parentId === personId);
+              return children.reduce((sum, c) => sum + 1 + countDescendants(c.id), 0);
+            }
+            const descendantCount = countDescendants(person.id);
+            if (descendantCount > 0) {
+              if (!window.confirm(`刪除「${person.name || '(未命名)'}」將同時刪除其下 ${descendantCount} 位繼承人，是否確定？`)) return;
             }
             dispatch({ type: 'DELETE_PERSON', payload: { id: person.id } });
           }}

@@ -186,7 +186,15 @@ function isValidCompact(obj: unknown): obj is CompactState {
   const o = obj as Record<string, unknown>;
   if (!Array.isArray(o.d) || !Array.isArray(o.p)) return false;
   if (typeof o.d[0] !== 'string') return false;
-  return o.p.every((item: unknown) => Array.isArray(item) && item.length >= 3);
+  return o.p.every((item: unknown) => {
+    if (!Array.isArray(item) || item.length < 3) return false;
+    const relIdx = item[1] as number;
+    const statusIdx = item[2] as number;
+    if (typeof relIdx !== 'number' || typeof statusIdx !== 'number') return false;
+    if (relIdx < 0 || relIdx >= RELATIONS.length) return false;
+    if (statusIdx < 0 || statusIdx >= STATUSES.length) return false;
+    return true;
+  });
 }
 
 function isValidShareState(obj: unknown): obj is ShareState {

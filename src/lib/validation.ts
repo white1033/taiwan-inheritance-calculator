@@ -7,7 +7,7 @@ export interface ValidationError {
   message: string;
 }
 
-export function validate(persons: Person[], _decedent?: Decedent): ValidationError[] {
+export function validate(persons: Person[], decedent?: Decedent): ValidationError[] {
   const errors: ValidationError[] = [];
   const personIds = new Set(persons.map(p => p.id));
   const personMap = new Map(persons.map(p => [p.id, p]));
@@ -40,10 +40,10 @@ export function validate(persons: Person[], _decedent?: Decedent): ValidationErr
         if (parent && parent.status !== '死亡' && parent.status !== '死亡絕嗣') {
           errors.push({ personId: p.id, field: 'parentId', message: '代位繼承的被代位者必須為死亡狀態' });
         }
-        // 1-2: 代位繼承僅限第一順位（民法 §1140）
+        // 代位繼承僅限第一順位（民法 §1140），配偶（null order）也不可為被代位者
         if (parent) {
           const parentOrder = getOrder(parent.relation);
-          if (parentOrder !== 1 && parentOrder !== null) {
+          if (parentOrder !== 1) {
             errors.push({ personId: p.id, field: 'status', message: '代位繼承僅適用於直系血親卑親屬（第一順位）' });
           }
         }
@@ -58,11 +58,20 @@ export function validate(persons: Person[], _decedent?: Decedent): ValidationErr
       }
     }
 
-    // 1-4: 再轉繼承的 parent 狀態驗證
+    // 再轉繼承的 parent 狀態驗證
     if (p.status === '再轉繼承' && p.parentId) {
       const parent = personMap.get(p.parentId);
       if (parent && parent.status !== '再轉繼承' && parent.status !== '死亡') {
         errors.push({ personId: p.id, field: 'parentId', message: '再轉繼承的被繼承者必須為再轉繼承或死亡狀態' });
+      }
+    }
+
+    // 再轉繼承 origin（無 parentId 或 parentId 不是再轉繼承者）需要 deathDate
+    if (p.status === '再轉繼承' && !p.deathDate) {
+      const parent = p.parentId ? personMap.get(p.parentId) : undefined;
+      const isOrigin = !parent || parent.status !== '再轉繼承';
+      if (isOrigin) {
+        errors.push({ personId: p.id, field: 'deathDate', message: '再轉繼承者必須填寫死亡日期' });
       }
     }
 
@@ -73,6 +82,22 @@ export function validate(persons: Person[], _decedent?: Decedent): ValidationErr
 
     if ((p.status === '死亡' || p.status === '死亡絕嗣') && !p.deathDate) {
       errors.push({ personId: p.id, field: 'deathDate', message: '死亡狀態必須填寫死亡日期' });
+    }
+
+    // 死亡日期順序驗證（需要被繼承人死亡日期）
+    if (decedent?.deathDate && p.deathDate) {
+      if (p.status === '代位繼承' || p.status === '死亡' || p.status === '死亡絕嗣') {
+        // 代位/死亡者應在被繼承人之前死亡
+        if (p.deathDate > decedent.deathDate) {
+          errors.push({ personId: p.id, field: 'deathDate', message: '代位繼承/死亡者之死亡日期應早於被繼承人死亡日期' });
+        }
+      }
+      if (p.status === '再轉繼承' && !p.parentId) {
+        // 再轉繼承 origin 應在被繼承人之後死亡
+        if (p.deathDate <= decedent.deathDate) {
+          errors.push({ personId: p.id, field: 'deathDate', message: '再轉繼承者之死亡日期應晚於被繼承人死亡日期' });
+        }
+      }
     }
   }
 

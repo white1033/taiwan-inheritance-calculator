@@ -34,6 +34,16 @@ function escapeFormulaInjection(value: string): string {
 }
 
 /**
+ * Strip the leading single-quote added by escapeFormulaInjection on re-import.
+ */
+function stripFormulaEscape(value: string): string {
+  if (value.startsWith("'") && /^[=+\-@\t\r]/.test(value.slice(1))) {
+    return value.slice(1);
+  }
+  return value;
+}
+
+/**
  * Sanitize filename by removing characters invalid on most filesystems.
  */
 function sanitizeFilename(name: string): string {
@@ -80,7 +90,7 @@ export function fromExcelData(rows: ExcelRow[]): { decedent: Decedent; persons: 
     }
     return {
       id: `imported_${i}`,
-      name: row.繼承人 || '',
+      name: stripFormulaEscape(row.繼承人 || ''),
       relation: RELATION_OPTIONS.includes(row.稱謂 as Relation) ? (row.稱謂 as Relation) : '子女',
       status: INHERITANCE_STATUS_OPTIONS.includes(row.繼承狀態 as InheritanceStatus) ? (row.繼承狀態 as InheritanceStatus) : '一般繼承',
       birthDate: row.出生日期 || undefined,

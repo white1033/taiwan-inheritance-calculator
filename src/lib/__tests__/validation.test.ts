@@ -148,6 +148,60 @@ describe('validate', () => {
     expect(errors.some(e => e.personId === '1' && e.message.includes('離婚'))).toBe(true);
   });
 
+  it('errors when representation heir parent is 配偶 (null order)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '配偶', relation: '配偶', status: '死亡', deathDate: '2023-01-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'status')).toBe(true);
+  });
+
+  it('errors when representation heir parent has 拋棄繼承 status', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '拋棄繼承' },
+      { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+  });
+
+  it('errors when 再轉繼承 origin has no deathDate', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '再轉繼承' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'deathDate')).toBe(true);
+  });
+
+  it('no deathDate error for 再轉繼承 sub-heir (non-origin)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '再轉繼承', deathDate: '2024-03-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '再轉繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(errors.filter(e => e.personId === '2' && e.field === 'deathDate')).toHaveLength(0);
+  });
+
+  it('errors when 代位繼承 parent died after decedent', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡', deathDate: '2024-06-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'deathDate')).toBe(true);
+    expect(errors.some(e => e.personId === '1' && e.message.includes('早於'))).toBe(true);
+  });
+
+  it('errors when 再轉繼承 origin died before decedent', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '再轉繼承', deathDate: '2023-06-01' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'deathDate')).toBe(true);
+    expect(errors.some(e => e.personId === '1' && e.message.includes('晚於'))).toBe(true);
+  });
+
   it('per-person current spouse uniqueness with parentId', () => {
     const persons: Person[] = [
       { id: '1', name: 'X', relation: '子女', status: '死亡', deathDate: '2023-01-01' },

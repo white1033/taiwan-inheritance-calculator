@@ -32,6 +32,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
 
   return (
     <div
+      id="left-panel"
       className={[
         'no-print bg-white flex flex-col overflow-y-auto border-r border-slate-200',
         // Tablet+: always visible, fixed width
@@ -109,7 +110,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
               id="decedent-name"
               type="text"
               value={state.decedent.name}
-              onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { name: e.target.value } })}
+              onChange={e => { dispatch({ type: 'SET_DECEDENT', payload: { name: e.target.value } }); setSelectedPresetIndex(null); }}
               placeholder="請輸入被繼承人姓名"
             />
           </div>
@@ -119,7 +120,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
               id="decedent-deathDate"
               type="date"
               value={state.decedent.deathDate || ''}
-              onChange={e => dispatch({ type: 'SET_DECEDENT', payload: { deathDate: e.target.value } })}
+              onChange={e => { dispatch({ type: 'SET_DECEDENT', payload: { deathDate: e.target.value } }); setSelectedPresetIndex(null); }}
             />
           </div>
           <div>
@@ -131,10 +132,12 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
               value={state.decedent.estateAmount ?? ''}
               onChange={e => {
                 const val = e.target.value;
+                const num = val === '' ? undefined : Math.max(0, Number(val));
                 dispatch({
                   type: 'SET_DECEDENT',
-                  payload: { estateAmount: val === '' ? undefined : Number(val) }
+                  payload: { estateAmount: num }
                 });
+                setSelectedPresetIndex(null);
               }}
               placeholder="例：10,000,000"
             />
@@ -153,7 +156,7 @@ export function LeftPanel({ open, onClose }: LeftPanelProps) {
             return (
               <Button
                 key={relation}
-                onClick={() => { dispatch({ type: 'ADD_PERSON', payload: { relation } }); onClose(); }}
+                onClick={() => { dispatch({ type: 'ADD_PERSON', payload: { relation } }); setSelectedPresetIndex(null); onClose(); }}
                 disabled={disabled}
                 className="min-h-[44px]"
               >

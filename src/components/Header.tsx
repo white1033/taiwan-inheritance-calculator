@@ -1,8 +1,9 @@
 interface HeaderProps {
   onTogglePanel: () => void;
+  panelOpen?: boolean;
 }
 
-export function Header({ onTogglePanel }: HeaderProps) {
+export function Header({ onTogglePanel, panelOpen }: HeaderProps) {
   return (
     <header className="no-print bg-slate-800 text-white px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3 landscape-compact">
       <button
@@ -10,6 +11,8 @@ export function Header({ onTogglePanel }: HeaderProps) {
         onClick={onTogglePanel}
         className="md:hidden p-2 rounded-md hover:bg-slate-700 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
         aria-label="Toggle panel"
+        aria-expanded={panelOpen}
+        aria-controls="left-panel"
       >
         <svg
           className="w-6 h-6"
