@@ -56,6 +56,8 @@ export function NodeContextMenu({
     <>
       <div
         className="fixed inset-0 z-50"
+        role="presentation"
+        aria-hidden="true"
         onClick={onClose}
         onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       />
