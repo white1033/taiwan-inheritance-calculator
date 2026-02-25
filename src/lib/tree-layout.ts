@@ -118,9 +118,10 @@ export function buildTreeLayout(
         id: `e-${personId}-${personSpouse.id}`,
         source: personId,
         target: personSpouse.id,
+        sourceHandle: 'left',
+        targetHandle: 'right',
         type: 'straight',
         style: { stroke: '#94a3b8', strokeWidth: 2 },
-        label: '婚',
       });
     }
 
@@ -184,9 +185,10 @@ export function buildTreeLayout(
       id: `e-${decedent.id}-${spouse.id}`,
       source: decedent.id,
       target: spouse.id,
+      sourceHandle: 'left',
+      targetHandle: 'right',
       type: 'straight',
       style: { stroke: '#94a3b8', strokeWidth: 2 },
-      label: '婚',
     });
   }
 

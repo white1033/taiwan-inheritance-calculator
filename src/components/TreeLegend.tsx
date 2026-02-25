@@ -20,7 +20,7 @@ export function TreeLegend() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="no-print absolute bottom-14 left-2 z-10">
+    <div className="no-print absolute top-2 right-2 z-10">
       <button
         type="button"
         onClick={() => setOpen(prev => !prev)}
@@ -30,7 +30,7 @@ export function TreeLegend() {
         圖例
       </button>
       {open && (
-        <div className="absolute bottom-9 left-0 bg-white border border-slate-200 shadow-lg rounded-lg p-3 w-48">
+        <div className="absolute top-9 right-0 bg-white border border-slate-200 shadow-lg rounded-lg p-3 w-48">
           <h3 className="text-xs font-semibold text-slate-500 mb-2">邊線樣式</h3>
           <div className="space-y-1.5 mb-3">
             {EDGE_ITEMS.map(item => (

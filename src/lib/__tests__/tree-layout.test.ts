@@ -66,7 +66,9 @@ describe('tree-layout', () => {
     
     const edge = findEdge({ nodes, edges }, 'D', 'S');
     expect(edge).toBeDefined();
-    // Spouse edge: solid line with distinct stroke color (no dashes)
+    // Spouse edge: horizontal with left/right handles
+    expect(edge?.sourceHandle).toBe('left');
+    expect(edge?.targetHandle).toBe('right');
     expect(edge?.style?.stroke).toBe('#94a3b8');
     expect(edge?.style?.strokeWidth).toBe(2);
   });
@@ -205,7 +207,9 @@ describe('tree-layout', () => {
     
     const edge = findEdge({ nodes, edges }, 'C', 'CS');
     expect(edge).toBeDefined();
-    // Spouse edge: solid line with distinct stroke color (no dashes)
+    // Spouse edge: horizontal with left/right handles
+    expect(edge?.sourceHandle).toBe('left');
+    expect(edge?.targetHandle).toBe('right');
     expect(edge?.style?.stroke).toBe('#94a3b8');
     expect(edge?.style?.strokeWidth).toBe(2);
   });

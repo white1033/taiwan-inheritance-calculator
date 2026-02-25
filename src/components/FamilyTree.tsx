@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
@@ -128,7 +127,6 @@ export function FamilyTree() {
         >
           <Background />
           <Controls className="no-print" />
-          <MiniMap className="no-print" pannable zoomable />
           <PrintFitView />
         </ReactFlow>
       </TreeActionsContext.Provider>
