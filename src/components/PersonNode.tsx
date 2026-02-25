@@ -73,6 +73,7 @@ export const PersonNode = memo(function PersonNode({
     >
       <Handle type="target" position={Position.Top} id="top" className="!bg-slate-400" />
       <Handle type="target" position={Position.Right} id="right" className="!bg-transparent !border-0 !w-0 !h-0" style={{ top: 40 }} />
+      <Handle type="target" position={Position.Left} id="left-in" className="!bg-transparent !border-0 !w-0 !h-0" style={{ top: 40 }} />
 
       {!data.isDecedent && (
         <button
@@ -181,6 +182,7 @@ export const PersonNode = memo(function PersonNode({
       )}
 
       <Handle type="source" position={Position.Left} id="left" className="!bg-transparent !border-0 !w-0 !h-0" style={{ top: 40 }} />
+      <Handle type="source" position={Position.Right} id="right-out" className="!bg-transparent !border-0 !w-0 !h-0" style={{ top: 40 }} />
       <Handle
         type="source"
         position={Position.Bottom}

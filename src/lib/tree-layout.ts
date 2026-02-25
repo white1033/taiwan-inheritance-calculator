@@ -320,17 +320,32 @@ export function buildTreeLayout(
     (p) => p.relation === '兄弟姊妹' && !p.parentId,
   );
   const siblingStartX = NODE_WIDTH + H_GAP * 2 + (spouse ? NODE_WIDTH + H_GAP : 0);
+  const siblingEdgeParent = fatherNode || motherNode;
   siblingPersons.forEach((sib, i) => {
     const x = siblingStartX + i * (NODE_WIDTH + H_GAP);
     addPersonNode(sib, x, 0);
-    edges.push({
-      id: `e-${decedent.id}-${sib.id}`,
-      source: decedent.id,
-      target: sib.id,
-      sourceHandle: 'bottom',
-      targetHandle: 'top',
-      type: 'smoothstep',
-    });
+    if (siblingEdgeParent) {
+      // With parents: connect from parent node (proper family tree)
+      edges.push({
+        id: `e-${siblingEdgeParent.id}-${sib.id}`,
+        source: siblingEdgeParent.id,
+        target: sib.id,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'smoothstep',
+      });
+    } else {
+      // No parents: horizontal connection from decedent
+      edges.push({
+        id: `e-${decedent.id}-${sib.id}`,
+        source: decedent.id,
+        target: sib.id,
+        sourceHandle: 'right-out',
+        targetHandle: 'left-in',
+        type: 'straight',
+        style: { stroke: '#94a3b8', strokeWidth: 2 },
+      });
+    }
   });
 
 

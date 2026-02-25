@@ -128,20 +128,42 @@ describe('tree-layout', () => {
     expect(c1?.position.y).toBe(360);
   });
 
-  test('Siblings: to the right of decedent, horizontal layout', () => {
+  test('Siblings without parents: horizontal straight edge from decedent', () => {
     const { nodes, edges } = layout([makePerson('B1', '兄弟姊妹'), makePerson('B2', '兄弟姊妹')]);
     const b1 = findNode({ nodes, edges }, 'B1');
     const b2 = findNode({ nodes, edges }, 'B2');
 
     // siblingStartX = NODE_WIDTH + H_GAP * 2 = 208 + 80 = 288
-    // b1.x = 288 + 0 * (208+40) = 288
     expect(b1?.position.x).toBe(288);
-    // b2.x = 288 + 1 * (208+40) = 536
     expect(b2?.position.x).toBe(536);
-
-    // All siblings on same y = 0
     expect(b1?.position.y).toBe(0);
     expect(b2?.position.y).toBe(0);
+
+    // No parents: horizontal straight edges from decedent
+    const e1 = findEdge({ nodes, edges }, 'D', 'B1');
+    expect(e1?.sourceHandle).toBe('right-out');
+    expect(e1?.targetHandle).toBe('left-in');
+    expect(e1?.type).toBe('straight');
+  });
+
+  test('Siblings with parents: edge from parent node', () => {
+    const persons = [
+      makePerson('F', '父'),
+      makePerson('B1', '兄弟姊妹'),
+      makePerson('B2', '兄弟姊妹'),
+    ];
+    const { nodes, edges } = layout(persons);
+
+    // Siblings connect from father (first available parent)
+    expect(findEdge({ nodes, edges }, 'F', 'B1')).toBeDefined();
+    expect(findEdge({ nodes, edges }, 'F', 'B2')).toBeDefined();
+    // No edge from decedent to siblings
+    expect(findEdge({ nodes, edges }, 'D', 'B1')).toBeUndefined();
+
+    const e1 = findEdge({ nodes, edges }, 'F', 'B1');
+    expect(e1?.sourceHandle).toBe('bottom');
+    expect(e1?.targetHandle).toBe('top');
+    expect(e1?.type).toBe('smoothstep');
   });
 
   test('Grandparents: 祖父+祖母 connect to 父, 外祖父+外祖母 connect to 母', () => {
