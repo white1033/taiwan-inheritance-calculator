@@ -38,7 +38,7 @@ const HTML_COLOR_PROPS = [
 
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
-  for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap']) {
+  for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap', '.react-flow__handle']) {
     clonedDoc.querySelectorAll<HTMLElement>(sel).forEach(el => {
       el.style.display = 'none';
     });
