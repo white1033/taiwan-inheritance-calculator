@@ -9,7 +9,10 @@ export function useUndoRedoShortcuts() {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
-      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const nav = navigator as Navigator & { userAgentData?: { platform: string } };
+      const isMac = nav.userAgentData
+        ? nav.userAgentData.platform === 'macOS'
+        : /Mac|iPhone|iPad/.test(navigator.userAgent);
       const mod = isMac ? e.metaKey : e.ctrlKey;
       if (!mod) return;
 

@@ -181,7 +181,13 @@ export function PersonEditor() {
         <Button
           variant="danger"
           className="w-full mt-2"
-          onClick={() => dispatch({ type: 'DELETE_PERSON', payload: { id: person.id } })}
+          onClick={() => {
+            const descendants = state.persons.filter(p => p.parentId === person.id);
+            if (descendants.length > 0) {
+              if (!window.confirm(`刪除「${person.name || '(未命名)'}」將同時刪除其下繼承人，是否確定？`)) return;
+            }
+            dispatch({ type: 'DELETE_PERSON', payload: { id: person.id } });
+          }}
         >
           刪除此繼承人
         </Button>

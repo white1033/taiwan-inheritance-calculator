@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 interface NodeContextMenuProps {
   x: number;
@@ -28,11 +28,20 @@ export function NodeContextMenu({
   onClose,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: x, top: y });
 
   useEffect(() => {
     const firstButton = menuRef.current?.querySelector<HTMLButtonElement>('button');
     firstButton?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const clampedLeft = Math.min(x, window.innerWidth - rect.width - 8);
+    const clampedTop = Math.min(y, window.innerHeight - rect.height - 8);
+    setPos({ left: Math.max(8, clampedLeft), top: Math.max(8, clampedTop) });
+  }, [x, y]);
 
   function handleMenuKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -66,7 +75,7 @@ export function NodeContextMenu({
         role="menu"
         aria-label="節點操作選單"
         className="fixed z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[160px]"
-        style={{ left: x, top: y }}
+        style={{ left: pos.left, top: pos.top }}
         onKeyDown={handleMenuKeyDown}
       >
         {!isSpouse && (

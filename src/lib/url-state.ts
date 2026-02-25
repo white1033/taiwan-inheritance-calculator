@@ -181,6 +181,22 @@ async function decompress(data: Uint8Array): Promise<Uint8Array> {
 // "1" = full JSON + deflate-raw (v1)
 // no prefix = legacy uncompressed full JSON
 
+function isValidCompact(obj: unknown): obj is CompactState {
+  if (!obj || typeof obj !== 'object') return false;
+  const o = obj as Record<string, unknown>;
+  if (!Array.isArray(o.d) || !Array.isArray(o.p)) return false;
+  if (typeof o.d[0] !== 'string') return false;
+  return o.p.every((item: unknown) => Array.isArray(item) && item.length >= 3);
+}
+
+function isValidShareState(obj: unknown): obj is ShareState {
+  if (!obj || typeof obj !== 'object') return false;
+  const o = obj as Record<string, unknown>;
+  if (!o.decedent || typeof o.decedent !== 'object') return false;
+  if (!Array.isArray(o.persons)) return false;
+  return true;
+}
+
 const V2_PREFIX = '2';
 const V1_PREFIX = '1';
 
@@ -225,13 +241,14 @@ export async function decodeState(hash: string): Promise<ShareState | null> {
     const parsed = JSON.parse(json);
 
     if (isCompact) {
+      if (!isValidCompact(parsed)) return null;
       const state = fromCompact(parsed as CompactState);
       if (!state.decedent || !Array.isArray(state.persons)) return null;
       return state;
     }
 
+    if (!isValidShareState(parsed)) return null;
     const state = parsed as ShareState;
-    if (!state.decedent || !Array.isArray(state.persons)) return null;
     return state;
   } catch {
     return null;

@@ -421,6 +421,38 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Divorced Spouse (離婚配偶)', () => {
+    it('spouse with divorceDate gets zero share', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '次子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+      expectShare(results, '長子', 1, 2);
+      expectShare(results, '次子', 1, 2);
+    });
+
+    it('divorced spouse with children: children split equally', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
+        { id: '2', name: '長子', relation: '子女', status: '一般繼承' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+      expectShare(results, '長子', 1, 1);
+    });
+
+    it('only divorced spouse, no other heirs: all shares zero', () => {
+      const persons: Person[] = [
+        { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '前妻', 0, 1);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);

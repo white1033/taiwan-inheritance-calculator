@@ -261,7 +261,10 @@ export async function printPage(elementId: string) {
   const canvas = await captureElement(element);
   const dataUrl = canvas.toDataURL('image/png');
 
-  const win = window.open('', '_blank')!;
+  const win = window.open('', '_blank');
+  if (!win) {
+    throw new Error('無法開啟列印視窗，請允許彈出視窗後再試');
+  }
   const doc = win.document;
 
   const style = doc.createElement('style');

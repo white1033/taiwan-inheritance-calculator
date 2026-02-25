@@ -141,7 +141,7 @@ export function calculateShares(_decedent: Decedent, persons: Person[]): Calcula
   if (persons.length === 0) return [];
 
   // Find the spouse (if any)
-  const spouse = persons.find(p => p.relation === '配偶' && p.status === '一般繼承');
+  const spouse = persons.find(p => p.relation === '配偶' && p.status === '一般繼承' && !p.divorceDate);
 
   // Determine the active inheritance order
   const activeOrder = determineActiveOrder(persons);

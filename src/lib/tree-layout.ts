@@ -71,21 +71,31 @@ export function buildTreeLayout(
     );
   }
 
+  const widthCache = new Map<string, number>();
+
   /** Calculate the width needed by a person and all their descendants */
   function subtreeWidth(personId: string): number {
+    const cached = widthCache.get(personId);
+    if (cached !== undefined) return cached;
+
     const childPersons = persons.filter(
       (p) => p.parentId === personId && p.relation !== '子女之配偶',
     );
     const selfWidth = hasSpouseNode(personId) ? NODE_WIDTH * 2 + H_GAP : NODE_WIDTH;
-    if (childPersons.length === 0) return selfWidth;
+    if (childPersons.length === 0) {
+      widthCache.set(personId, selfWidth);
+      return selfWidth;
+    }
     const childrenWidth = childPersons.reduce(
       (sum, c) => sum + subtreeWidth(c.id),
       0,
     );
-    return Math.max(
+    const result = Math.max(
       selfWidth,
       childrenWidth + (childPersons.length - 1) * H_GAP,
     );
+    widthCache.set(personId, result);
+    return result;
   }
 
   /** Recursively layout a person's sub-heirs */

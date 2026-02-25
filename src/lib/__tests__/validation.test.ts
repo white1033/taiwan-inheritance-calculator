@@ -110,6 +110,44 @@ describe('validate', () => {
     expect(hasError(errors, '2', 'relation')).toBe(true);
   });
 
+  it('errors when representation heir parent is not first order', () => {
+    const persons: Person[] = [
+      { id: '1', name: '兄', relation: '兄弟姊妹', status: '死亡', deathDate: '2023-01-01' },
+      { id: '2', name: '兄子', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'status')).toBe(true);
+  });
+
+  it('errors when sub-heir has parent with 死亡絕嗣 status', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡絕嗣', deathDate: '2023-01-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+    expect(errors.some(e => e.personId === '2' && e.message.includes('死亡絕嗣'))).toBe(true);
+  });
+
+  it('errors when re-transfer heir parent has invalid status', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '孫A', relation: '子女', status: '再轉繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+    expect(errors.some(e => e.personId === '2' && e.message.includes('再轉繼承'))).toBe(true);
+  });
+
+  it('warns when divorced spouse has 一般繼承 status', () => {
+    const persons: Person[] = [
+      { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'divorceDate')).toBe(true);
+    expect(errors.some(e => e.personId === '1' && e.message.includes('離婚'))).toBe(true);
+  });
+
   it('per-person current spouse uniqueness with parentId', () => {
     const persons: Person[] = [
       { id: '1', name: 'X', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
