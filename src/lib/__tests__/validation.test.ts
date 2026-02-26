@@ -148,13 +148,12 @@ describe('validate', () => {
     expect(errors.some(e => e.personId === '2' && e.message.includes('再轉繼承'))).toBe(true);
   });
 
-  it('warns when divorced spouse has 一般繼承 status', () => {
+  it('divorced spouse with 一般繼承 status does not produce validation error', () => {
     const persons: Person[] = [
       { id: '1', name: '前妻', relation: '配偶', status: '一般繼承', divorceDate: '2020-01-01' },
     ];
     const errors = validate(persons, decedent);
-    expect(hasError(errors, '1', 'divorceDate')).toBe(true);
-    expect(errors.some(e => e.personId === '1' && e.message.includes('離婚'))).toBe(true);
+    expect(hasError(errors, '1', 'divorceDate')).toBe(false);
   });
 
   it('errors when representation heir parent is 配偶 (null order)', () => {

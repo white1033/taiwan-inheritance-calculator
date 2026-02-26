@@ -85,11 +85,6 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       errors.push({ personId: p.id, field: 'relation', message: '子女之配偶必須隸屬於一位子女' });
     }
 
-    // 1-5: 離婚配偶警告
-    if (p.relation === '配偶' && p.divorceDate && p.status === '一般繼承') {
-      errors.push({ personId: p.id, field: 'divorceDate', message: '已離婚之配偶不具繼承權，應繼分將為零' });
-    }
-
     if ((p.status === '死亡' || p.status === '死亡絕嗣') && !p.deathDate) {
       errors.push({ personId: p.id, field: 'deathDate', message: '死亡狀態必須填寫死亡日期' });
     }
