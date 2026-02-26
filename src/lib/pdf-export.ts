@@ -30,12 +30,6 @@ function resolveOklch(value: string): string {
   });
 }
 
-const HTML_COLOR_PROPS = [
-  'color', 'background-color', 'border-color',
-  'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-  'outline-color', 'text-decoration-color', 'box-shadow',
-] as const;
-
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
   for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap', '.react-flow__handle', '.no-print']) {
@@ -73,6 +67,9 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   clonedDoc.head.appendChild(styleEl);
 
   // --- Phase 2: Inline computed colours (oklch → hex via canvas) ---
+  // Chrome's getComputedStyle can return oklch() values for any colour
+  // property. Instead of maintaining a fixed list, scan all computed
+  // properties for oklch() and replace them.
   const origRoot = document.getElementById(clone.id);
   if (!origRoot) return;
 
@@ -84,9 +81,10 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
     const cloneEl = cloneEls[i] as HTMLElement | SVGElement;
     const computed = getComputedStyle(origEl);
 
-    for (const prop of HTML_COLOR_PROPS) {
+    for (let j = 0; j < computed.length; j++) {
+      const prop = computed[j];
       const value = computed.getPropertyValue(prop);
-      if (value) {
+      if (value && value.includes('oklch')) {
         cloneEl.style.setProperty(prop, resolveOklch(value));
       }
     }
