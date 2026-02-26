@@ -186,16 +186,77 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
 const CANVAS_SCALE = 2;
 
+/**
+ * Monkey-patch window.getComputedStyle so that every CSS value
+ * returned during html2canvas rendering is oklch-free.
+ *
+ * html2canvas always calls the **parent** window's getComputedStyle
+ * (line 3796: `window.getComputedStyle(element, null)`), even for
+ * cloned elements inside its iframe. Its internal color parser only
+ * supports rgb/rgba/hsl/hsla and throws on oklch().
+ *
+ * Returns an "unpatch" function to restore the original.
+ */
+function patchGetComputedStyle(): () => void {
+  const original = window.getComputedStyle;
+
+  window.getComputedStyle = function (
+    elt: Element,
+    pseudoElt?: string | null,
+  ): CSSStyleDeclaration {
+    const cs = original.call(window, elt, pseudoElt);
+
+    return new Proxy(cs, {
+      get(target, prop, receiver) {
+        // getPropertyValue — intercept to resolve oklch
+        if (prop === 'getPropertyValue') {
+          return function (name: string) {
+            return resolveOklch(target.getPropertyValue(name));
+          };
+        }
+
+        // Indexed access (0, 1, 2 …) returns property names — pass through
+        if (typeof prop === 'string' && /^\d+$/.test(prop)) {
+          return target[Number(prop) as unknown as keyof CSSStyleDeclaration];
+        }
+
+        // length, item, etc. — delegate
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof value === 'function') {
+          return value.bind(target);
+        }
+        // String property values (backgroundColor, color, …)
+        if (typeof value === 'string') {
+          return resolveOklch(value);
+        }
+        return value;
+      },
+    });
+  } as typeof window.getComputedStyle;
+
+  return () => {
+    window.getComputedStyle = original;
+  };
+}
+
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
 
-  // html2canvas renders background + nodes (but not SVG edges)
-  const baseCanvas = await html2canvas(element, {
-    scale: CANVAS_SCALE,
-    useCORS: true,
-    logging: false,
-    onclone: patchClone,
-  });
+  // Patch getComputedStyle BEFORE html2canvas runs so it never sees oklch
+  const unpatch = patchGetComputedStyle();
+
+  let baseCanvas: HTMLCanvasElement;
+  try {
+    // html2canvas renders background + nodes (but not SVG edges)
+    baseCanvas = await html2canvas(element, {
+      scale: CANVAS_SCALE,
+      useCORS: true,
+      logging: false,
+      onclone: patchClone,
+    });
+  } finally {
+    unpatch();
+  }
 
   // Composite with correct z-order: background → edges → nodes
   const finalCanvas = document.createElement('canvas');
