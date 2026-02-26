@@ -8,6 +8,8 @@
  *  3. Composite: html2canvas result → edges → re-stamp node cards
  *     This gives correct z-order: background → edges → nodes
  */
+import { FIT_VIEW_FOR_EXPORT_EVENT } from './export-events.ts';
+import { downloadBlob } from './download';
 
 // Lazy-initialized 1x1 canvas context for colour sampling.
 let _ctx: CanvasRenderingContext2D | null = null;
@@ -118,6 +120,14 @@ async function waitForFontsReady(): Promise<void> {
   }
 }
 
+async function fitTreeViewForExport() {
+  window.dispatchEvent(new CustomEvent(FIT_VIEW_FOR_EXPORT_EVENT, {
+    detail: { padding: 0.2, duration: 0 },
+  }));
+  await waitForNextFrame();
+  await waitForNextFrame();
+}
+
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
   for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap', '.react-flow__handle', '.no-print']) {
@@ -125,12 +135,6 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
       el.style.display = 'none';
     });
   }
-
-  // Keep node text visually clipped inside card bounds in exported image.
-  clonedDoc.querySelectorAll<HTMLElement>('.react-flow__node').forEach((el) => {
-    el.style.overflow = 'hidden';
-    el.style.boxSizing = 'border-box';
-  });
 
   // --- Phase 1: Replace all stylesheets with html2canvas-safe colours ---
   const cssTexts: string[] = [];
@@ -387,6 +391,7 @@ function cropCanvasToNodeBounds(
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
   await waitForFontsReady();
+  await fitTreeViewForExport();
   await waitForNextFrame();
 
   // Patch live stylesheets BEFORE html2canvas clones the DOM.
@@ -436,22 +441,12 @@ async function captureElement(element: HTMLElement) {
   return cropCanvasToNodeBounds(finalCanvas, element, CANVAS_SCALE);
 }
 
-export async function exportToPdf(elementId: string, filename: string) {
-  const element = document.getElementById(elementId);
-  if (!element) throw new Error(`Element #${elementId} not found`);
-
-  const { default: jsPDF } = await import('jspdf');
-
-  const canvas = await captureElement(element);
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF({
-    orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-    unit: 'px',
-    format: [canvas.width, canvas.height],
+async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), 'image/png');
   });
-
-  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-  pdf.save(filename);
+  if (!blob) throw new Error('圖片匯出失敗：無法建立檔案');
+  return blob;
 }
 
 export async function exportToPng(elementId: string, filename: string) {
@@ -459,26 +454,41 @@ export async function exportToPng(elementId: string, filename: string) {
   if (!element) throw new Error(`Element #${elementId} not found`);
 
   const canvas = await captureElement(element);
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  const blob = await canvasToPngBlob(canvas);
+  await downloadBlob(blob, filename);
 }
 
 export async function printPage(elementId: string) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error(`Element #${elementId} not found`);
 
-  // Use browser-native print flow so users can directly "Save to PDF".
-  // This avoids html2canvas/jsPDF rendering differences between browsers.
-  await waitForFontsReady();
-  await waitForNextFrame();
+  // Render a single flattened image first so browser print does not clip
+  // ReactFlow's transformed viewport.
+  const canvas = await captureElement(element);
+  const dataUrl = canvas.toDataURL('image/png');
 
-  const originalTitle = document.title;
-  document.title = '繼承系統圖';
-  try {
-    window.print();
-  } finally {
-    document.title = originalTitle;
+  const win = window.open('', '_blank');
+  if (!win) {
+    throw new Error('無法開啟列印視窗，請允許彈出視窗後再試');
   }
+  const doc = win.document;
+  doc.title = '繼承系統圖';
+
+  const style = doc.createElement('style');
+  style.textContent = `
+    @page { margin: 10mm; size: landscape; }
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { display: flex; justify-content: center; align-items: flex-start; }
+    img { max-width: 100%; height: auto; display: block; }
+  `;
+  doc.head.appendChild(style);
+
+  const img = doc.createElement('img');
+  img.src = dataUrl;
+  img.alt = '繼承系統圖';
+  img.onload = () => { win.focus(); win.print(); win.close(); };
+  img.onerror = () => {
+    doc.body.textContent = '圖片載入失敗，請關閉此視窗後重試';
+  };
+  doc.body.appendChild(img);
 }

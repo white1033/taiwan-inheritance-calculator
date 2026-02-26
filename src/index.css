@@ -13,6 +13,8 @@
 }
 
 @media print {
+  @page { margin: 10mm; size: landscape; }
+
   .no-print { display: none !important; }
 
   /* Hide ReactFlow UI chrome */
@@ -20,18 +22,58 @@
   .react-flow__background,
   .react-flow__minimap { display: none !important; }
 
-  /* Make tree fill the printed page */
+  html, body {
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+  }
+
+  #root, #app-root, #family-tree {
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Keep ReactFlow measurable in print layout (avoid 0px-height white page). */
+  .react-flow,
+  .react-flow__renderer,
+  .react-flow__viewport {
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    display: block !important;
+    position: relative !important;
+    overflow: visible !important;
+  }
+
+  /* Make tree fill the printed page without viewport clipping */
   #app-root {
-    height: auto !important;
     display: block !important;
   }
   #family-tree {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 100vh !important;
-    overflow: visible !important;
+    position: relative !important;
   }
+
+  .react-flow__pane {
+    pointer-events: none !important;
+  }
+
   .react-flow__node {
     page-break-inside: avoid;
+  }
+
+  .react-flow__edge,
+  .react-flow__connection {
+    break-inside: avoid;
+  }
+
+  /* Prevent extra footer text from reserving space during print. */
+  .landscape-hide {
+    display: none !important;
   }
 }

@@ -25,17 +25,14 @@ describe('ExportToolbar', () => {
     renderToolbar();
     expect(screen.getByText('列印')).toBeInTheDocument();
     expect(screen.getByText('Excel 匯出')).toBeInTheDocument();
-    expect(screen.getByText('Excel 匯入')).toBeInTheDocument();
-    expect(screen.getByText('PDF 匯出')).toBeInTheDocument();
     expect(screen.getByText('繼承系統圖')).toBeInTheDocument();
     expect(screen.getByText('複製分享連結')).toBeInTheDocument();
   });
 
-  it('renders import file input (hidden)', () => {
+  it('does not render import file input', () => {
     renderToolbar();
     const input = document.querySelector('input[type="file"]');
-    expect(input).toBeInTheDocument();
-    expect(input).toHaveClass('hidden');
+    expect(input).not.toBeInTheDocument();
   });
 
   it('calls clipboard API when share link button is clicked', async () => {

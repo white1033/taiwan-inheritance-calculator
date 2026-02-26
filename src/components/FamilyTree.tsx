@@ -14,6 +14,7 @@ import { countDescendants } from '../lib/person-utils.ts';
 import { NodeContextMenu } from './NodeContextMenu.tsx';
 import { TreeActionsContext, type TreeActions } from '../context/TreeActionsContext.tsx';
 import { TreeLegend } from './TreeLegend.tsx';
+import { FIT_VIEW_FOR_EXPORT_EVENT, type FitViewForExportDetail } from '../lib/export-events.ts';
 
 const nodeTypes: NodeTypes = {
   person: PersonNode,
@@ -22,9 +23,23 @@ const nodeTypes: NodeTypes = {
 function PrintFitView() {
   const { fitView } = useReactFlow();
   useEffect(() => {
-    const handler = () => fitView({ padding: 0.2 });
-    window.addEventListener('beforeprint', handler);
-    return () => window.removeEventListener('beforeprint', handler);
+    const handleBeforePrint = () => {
+      void fitView({ padding: 0.2, duration: 0 });
+    };
+    const handleFitForExport = (event: Event) => {
+      const detail = (event as CustomEvent<FitViewForExportDetail | undefined>).detail;
+      void fitView({
+        padding: detail?.padding ?? 0.2,
+        duration: detail?.duration ?? 0,
+      });
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener(FIT_VIEW_FOR_EXPORT_EVENT, handleFitForExport as EventListener);
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener(FIT_VIEW_FOR_EXPORT_EVENT, handleFitForExport as EventListener);
+    };
   }, [fitView]);
   return null;
 }

@@ -1,5 +1,6 @@
 import type { Person, Decedent, Relation, InheritanceStatus } from '../types/models';
 import { RELATION_OPTIONS, INHERITANCE_STATUS_OPTIONS } from '../types/models';
+import { downloadBlob } from './download';
 
 interface ExcelRow {
   編號: number;
@@ -129,13 +130,8 @@ export async function exportToExcel(decedent: Decedent, persons: Person[]) {
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
   const safeName = sanitizeFilename(decedent.name || '未命名');
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `繼承系統表_${safeName}.xlsx`;
-  link.click();
-  URL.revokeObjectURL(url);
+  await downloadBlob(blob, `繼承系統表_${safeName}.xlsx`);
 }
 
 export async function importFromExcel(file: File): Promise<{ decedent: Decedent; persons: Person[] }> {

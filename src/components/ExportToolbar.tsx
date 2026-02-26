@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useInheritance } from '../hooks/useInheritance';
-import { exportToExcel, importFromExcel } from '../lib/excel';
-import { exportToPdf, exportToPng, printPage } from '../lib/pdf-export';
+import { exportToExcel } from '../lib/excel';
+import { exportToPng, printPage } from '../lib/pdf-export';
 import { useToast } from '../hooks/useToast';
 import { buildShareUrl } from '../lib/url-state';
 
-type LoadingAction = 'print' | 'excel' | 'pdf' | 'png' | null;
+type LoadingAction = 'print' | 'excel' | 'png' | null;
 
 function Spinner() {
   return (
@@ -17,9 +17,8 @@ function Spinner() {
 }
 
 export function ExportToolbar() {
-  const { state, dispatch } = useInheritance();
+  const { state } = useInheritance();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasErrors = state.validationErrors.length > 0;
   const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
 
@@ -36,33 +35,11 @@ export function ExportToolbar() {
     }
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const result = await importFromExcel(file);
-      dispatch({ type: 'LOAD_PERSONS', payload: result });
-      toast(`已匯入 ${result.persons.length} 位繼承人`, 'success');
-    } catch (err) {
-      toast('匯入失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
-    }
-    // Reset file input so same file can be re-imported
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-
   async function handleExcelExport() {
     try {
       await exportToExcel(state.decedent, state.persons);
     } catch (err) {
       toast('Excel 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
-    }
-  }
-
-  async function handlePdfExport() {
-    try {
-      await exportToPdf('family-tree', '繼承系統表.pdf');
-    } catch (err) {
-      toast('PDF 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
     }
   }
 
@@ -98,30 +75,6 @@ export function ExportToolbar() {
       >
         {loadingAction === 'excel' && <Spinner />}
         Excel 匯出
-      </button>
-      <button
-        type="button"
-        disabled={!!loadingAction}
-        onClick={() => fileInputRef.current?.click()}
-        className={`px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${loadingAction ? 'opacity-40 cursor-not-allowed' : ''}`}
-      >
-        Excel 匯入
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls"
-        className="hidden"
-        onChange={handleImport}
-      />
-      <button
-        type="button"
-        disabled={hasErrors || !!loadingAction}
-        onClick={() => guardedExport('pdf', handlePdfExport)}
-        className={btnClass('pdf')}
-      >
-        {loadingAction === 'pdf' && <Spinner />}
-        PDF 匯出
       </button>
       <button
         type="button"
