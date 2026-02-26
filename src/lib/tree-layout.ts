@@ -180,13 +180,19 @@ export function buildTreeLayout(
     } satisfies PersonNodeData,
   });
 
-  // Spouses of decedent (direct, no parentId) — stacked vertically left of decedent
+  // Spouses of decedent (direct, no parentId) — stacked horizontally left of decedent
+  // Sort: current spouse closest to decedent, former spouses further left
   const spouses = persons.filter((p) => p.relation === '配偶' && !p.parentId);
-  const SPOUSE_V_GAP = 40;
-  spouses.forEach((sp, i) => {
-    const sy = i * (NODE_HEIGHT + SPOUSE_V_GAP);
-    addPersonNode(sp, -(NODE_WIDTH + H_GAP), sy);
-    const isFormer = !!sp.divorceDate || sp.status === '死亡';
+  const isFormerSpouse = (sp: Person) => !!sp.divorceDate || sp.status === '死亡';
+  const sortedSpouses = [...spouses].sort((a, b) => {
+    const aFormer = isFormerSpouse(a) ? 1 : 0;
+    const bFormer = isFormerSpouse(b) ? 1 : 0;
+    return aFormer - bFormer; // current first (index 0 = closest to decedent)
+  });
+  sortedSpouses.forEach((sp, i) => {
+    const sx = -(i + 1) * (NODE_WIDTH + H_GAP);
+    addPersonNode(sp, sx, 0);
+    const isFormer = isFormerSpouse(sp);
     edges.push({
       id: `e-${decedent.id}-${sp.id}`,
       source: decedent.id,
