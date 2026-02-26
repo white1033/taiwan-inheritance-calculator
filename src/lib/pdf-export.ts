@@ -189,34 +189,79 @@ const CANVAS_SCALE = 2;
 const OKLCH_RE = /oklch\([^)]*\)/gi;
 
 /**
- * Temporarily rewrite every oklch() occurrence in live <style> elements
- * to its hex equivalent.  This ensures that getComputedStyle on any
- * element — regardless of which code path reads it — will never return
- * oklch values.
+ * Temporarily rewrite every oklch() occurrence in the live document's
+ * stylesheets (both inline <style> and external <link>) so that
+ * getComputedStyle never returns oklch through any code path.
  *
- * Returns an "unpatch" function that restores original stylesheet text.
+ * For <link> stylesheets we read their cssRules, patch oklch → hex,
+ * and inject a replacement <style> (disabling the original <link>).
+ *
+ * Returns an "unpatch" function that restores everything.
  */
 function patchLiveStylesheets(): () => void {
-  const originals: { el: HTMLStyleElement; text: string }[] = [];
+  type Undo = () => void;
+  const undos: Undo[] = [];
 
+  // 1. Inline <style> elements — rewrite textContent directly
   document.querySelectorAll<HTMLStyleElement>('style').forEach((styleEl) => {
     const text = styleEl.textContent ?? '';
     if (OKLCH_RE.test(text)) {
-      originals.push({ el: styleEl, text });
-      OKLCH_RE.lastIndex = 0; // reset regex state
+      const original = text;
+      OKLCH_RE.lastIndex = 0;
       styleEl.textContent = text.replace(OKLCH_RE, (match) => {
         const ctx = getCtx();
         ctx.fillStyle = '#000000';
         ctx.fillStyle = match;
         return ctx.fillStyle;
       });
+      undos.push(() => { styleEl.textContent = original; });
     }
   });
 
-  return () => {
-    for (const { el, text } of originals) {
-      el.textContent = text;
+  // 2. External <link rel="stylesheet"> — read rules, inject patched <style>,
+  //    disable the <link> temporarily
+  document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]').forEach((linkEl) => {
+    // Find the matching CSSStyleSheet for this <link>
+    let sheet: CSSStyleSheet | null = null;
+    for (const s of Array.from(document.styleSheets)) {
+      if (s.ownerNode === linkEl) { sheet = s; break; }
     }
+    if (!sheet) return;
+
+    let cssText = '';
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        cssText += rule.cssText + '\n';
+      }
+    } catch {
+      return; // CORS — cannot read rules
+    }
+
+    if (!OKLCH_RE.test(cssText)) return;
+    OKLCH_RE.lastIndex = 0;
+
+    const patched = cssText.replace(OKLCH_RE, (match) => {
+      const ctx = getCtx();
+      ctx.fillStyle = '#000000';
+      ctx.fillStyle = match;
+      return ctx.fillStyle;
+    });
+
+    // Disable original <link> and inject replacement <style>
+    linkEl.disabled = true;
+    const replacement = document.createElement('style');
+    replacement.textContent = patched;
+    replacement.dataset.oklchPatch = '1';
+    document.head.appendChild(replacement);
+
+    undos.push(() => {
+      linkEl.disabled = false;
+      replacement.remove();
+    });
+  });
+
+  return () => {
+    for (const undo of undos) undo();
   };
 }
 
