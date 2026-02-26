@@ -38,7 +38,7 @@ export function buildTreeLayout(
 
   function hasCurrentSpouse(personId: string): boolean {
     return persons.some(
-      (p) => p.parentId === personId && p.relation === '子女之配偶' && !p.divorceDate,
+      (p) => p.parentId === personId && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡',
     );
   }
 

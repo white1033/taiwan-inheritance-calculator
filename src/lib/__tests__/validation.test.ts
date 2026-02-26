@@ -197,8 +197,20 @@ describe('validate', () => {
       { id: '2', name: '孫A', relation: '子女', status: '代位繼承', parentId: '1' },
     ];
     const errors = validate(persons, decedent);
-    expect(hasError(errors, '1', 'deathDate')).toBe(true);
-    expect(errors.some(e => e.personId === '1' && e.message.includes('早於'))).toBe(true);
+    // 錯誤應報在代位繼承子嗣上（被代位者死亡日期晚於被繼承人）
+    expect(hasError(errors, '2', 'status')).toBe(true);
+    expect(errors.some(e => e.personId === '2' && e.message.includes('再轉繼承'))).toBe(true);
+    // 死亡者本身不應因死亡日期晚於被繼承人而報錯
+    expect(hasError(errors, '1', 'deathDate')).toBe(false);
+  });
+
+  it('no error for 死亡 status person who died after decedent (valid 再轉繼承 scenario)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡', deathDate: '2024-06-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '再轉繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '1', 'deathDate')).toBe(false);
   });
 
   it('errors when 再轉繼承 origin died before decedent', () => {

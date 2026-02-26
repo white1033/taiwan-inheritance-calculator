@@ -46,6 +46,10 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
           if (parentOrder !== 1) {
             errors.push({ personId: p.id, field: 'status', message: '代位繼承僅適用於直系血親卑親屬（第一順位）' });
           }
+          // 被代位者須在被繼承人之前死亡，否則應為再轉繼承
+          if (decedent?.deathDate && parent.deathDate && parent.deathDate > decedent.deathDate) {
+            errors.push({ personId: p.id, field: 'status', message: '被代位者死亡日期晚於被繼承人，應為再轉繼承而非代位繼承' });
+          }
         }
       }
     }
@@ -96,10 +100,10 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
 
     // 死亡日期順序驗證（需要被繼承人死亡日期）
     if (decedent?.deathDate && p.deathDate) {
-      if (p.status === '代位繼承' || p.status === '死亡' || p.status === '死亡絕嗣') {
-        // 代位/死亡者應在被繼承人之前死亡
+      if (p.status === '代位繼承') {
+        // 代位繼承者應在被繼承人之前死亡
         if (p.deathDate > decedent.deathDate) {
-          errors.push({ personId: p.id, field: 'deathDate', message: '代位繼承/死亡者之死亡日期應早於被繼承人死亡日期' });
+          errors.push({ personId: p.id, field: 'deathDate', message: '代位繼承者之死亡日期應早於被繼承人死亡日期' });
         }
       }
       if (p.status === '再轉繼承' && !p.parentId) {

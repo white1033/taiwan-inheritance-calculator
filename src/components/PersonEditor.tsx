@@ -204,7 +204,7 @@ export function PersonEditor() {
                   payload: { parentId: person.id, relation: '子女之配偶' },
                 })}
                 disabled={state.persons.some(
-                  p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate
+                  p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
                 )}
               >
                 + 新增配偶

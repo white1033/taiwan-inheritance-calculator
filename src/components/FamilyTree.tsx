@@ -110,7 +110,7 @@ export function FamilyTree() {
 
   const hasCurrentSpouseForContextPerson = contextMenu
     ? state.persons.some(
-        p => p.parentId === contextMenu.personId && p.relation === '子女之配偶' && !p.divorceDate
+        p => p.parentId === contextMenu.personId && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
       )
     : false;
 
