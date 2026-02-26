@@ -469,25 +469,16 @@ export async function printPage(elementId: string) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error(`Element #${elementId} not found`);
 
-  const canvas = await captureElement(element);
-  const dataUrl = canvas.toDataURL('image/png');
+  // Use browser-native print flow so users can directly "Save to PDF".
+  // This avoids html2canvas/jsPDF rendering differences between browsers.
+  await waitForFontsReady();
+  await waitForNextFrame();
 
-  const win = window.open('', '_blank');
-  if (!win) {
-    throw new Error('無法開啟列印視窗，請允許彈出視窗後再試');
+  const originalTitle = document.title;
+  document.title = '繼承系統圖';
+  try {
+    window.print();
+  } finally {
+    document.title = originalTitle;
   }
-  const doc = win.document;
-
-  const style = doc.createElement('style');
-  style.textContent = '@media print { @page { margin: 10mm; } } body { margin: 0; display: flex; justify-content: center; } img { max-width: 100%; height: auto; }';
-  doc.head.appendChild(style);
-  doc.title = '繼承系統圖';
-
-  const img = doc.createElement('img');
-  img.src = dataUrl;
-  img.onload = () => { win.print(); win.close(); };
-  img.onerror = () => {
-    win.document.body.textContent = '圖片載入失敗，請關閉此視窗後重試';
-  };
-  doc.body.appendChild(img);
 }
