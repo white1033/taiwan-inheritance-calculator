@@ -3,31 +3,103 @@
  * and has limited SVG rendering (ReactFlow edges are lost).
  *
  * Strategy:
- *  1. patchClone — fix oklch() in stylesheets and inline styles
+ *  1. patchClone — fix modern colour functions in stylesheets and inline styles
  *  2. drawEdgesOnCanvas — draw edge paths via Canvas 2D API
  *  3. Composite: html2canvas result → edges → re-stamp node cards
  *     This gives correct z-order: background → edges → nodes
  */
 
-// Lazy-initialized canvas context for oklch → hex conversion
+// Lazy-initialized 1x1 canvas context for colour sampling.
 let _ctx: CanvasRenderingContext2D | null = null;
 
 function getCtx(): CanvasRenderingContext2D {
   if (!_ctx) {
-    _ctx = document.createElement('canvas').getContext('2d')!;
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    _ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   }
   return _ctx;
 }
 
-/** Replace every oklch(...) in a CSS value string with its hex equivalent. */
-function resolveOklch(value: string): string {
-  if (!value || !value.includes('oklch')) return value;
+function hasUnsupportedColorFn(value: string): boolean {
+  return /oklch\(|oklab\(|color-mix\(/i.test(value);
+}
+
+function colorFunctionToRgba(value: string): string {
   const ctx = getCtx();
-  return value.replace(/oklch\([^)]*\)/gi, (match) => {
-    ctx.fillStyle = '#000000';
-    ctx.fillStyle = match;
-    return ctx.fillStyle;
-  });
+
+  try {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillStyle = value;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b, aByte] = ctx.getImageData(0, 0, 1, 1).data;
+
+    if (aByte >= 255) return `rgb(${r}, ${g}, ${b})`;
+    const alpha = Number((aByte / 255).toFixed(3));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  } catch {
+    return value;
+  }
+}
+
+function replaceCssFunctionCalls(
+  input: string,
+  fnName: string,
+  replacer: (fullCall: string) => string,
+): string {
+  const lower = input.toLowerCase();
+  const target = `${fnName.toLowerCase()}(`;
+  let i = 0;
+  let out = '';
+
+  while (i < input.length) {
+    const start = lower.indexOf(target, i);
+    if (start === -1) {
+      out += input.slice(i);
+      break;
+    }
+
+    out += input.slice(i, start);
+
+    let depth = 0;
+    let end = -1;
+    for (let j = start; j < input.length; j++) {
+      const ch = input[j];
+      if (ch === '(') depth++;
+      if (ch === ')') {
+        depth--;
+        if (depth === 0) {
+          end = j;
+          break;
+        }
+      }
+    }
+
+    if (end === -1) {
+      out += input.slice(start);
+      break;
+    }
+
+    const fullCall = input.slice(start, end + 1);
+    out += replacer(fullCall);
+    i = end + 1;
+  }
+
+  return out;
+}
+
+/** Convert unsupported colour functions to rgba()/rgb() for html2canvas. */
+function resolveColorFns(value: string): string {
+  if (!value || !hasUnsupportedColorFn(value)) return value;
+
+  let out = value;
+  out = replaceCssFunctionCalls(out, 'oklch', colorFunctionToRgba);
+  out = replaceCssFunctionCalls(out, 'oklab', colorFunctionToRgba);
+  out = replaceCssFunctionCalls(out, 'color-mix', colorFunctionToRgba);
+  return out;
 }
 
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
@@ -38,7 +110,7 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
     });
   }
 
-  // --- Phase 1: Replace all stylesheets with oklch-free versions ---
+  // --- Phase 1: Replace all stylesheets with html2canvas-safe colours ---
   const cssTexts: string[] = [];
   for (const sheet of Array.from(document.styleSheets)) {
     try {
@@ -55,21 +127,16 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Remove originals from the clone
   clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
 
-  // Inject patched CSS (oklch → hex via canvas conversion)
-  const patched = cssTexts.join('\n').replace(/oklch\([^)]*\)/gi, (match) => {
-    const ctx = getCtx();
-    ctx.fillStyle = '#000000';
-    ctx.fillStyle = match;
-    return ctx.fillStyle;
-  });
+  // Inject patched CSS (oklch/oklab/color-mix → rgb/rgba)
+  const patched = resolveColorFns(cssTexts.join('\n'));
   const styleEl = clonedDoc.createElement('style');
   styleEl.textContent = patched;
   clonedDoc.head.appendChild(styleEl);
 
-  // --- Phase 2: Inline computed colours (oklch → hex via canvas) ---
-  // Chrome's getComputedStyle can return oklch() values for any colour
+  // --- Phase 2: Inline computed colours ---
+  // Chrome's getComputedStyle can return oklch()/oklab() values for any colour
   // property. Instead of maintaining a fixed list, scan all computed
-  // properties for oklch() and replace them.
+  // properties for unsupported colour functions and replace them.
   const origRoot = document.getElementById(clone.id);
   if (!origRoot) return;
 
@@ -84,8 +151,8 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
     for (let j = 0; j < computed.length; j++) {
       const prop = computed[j];
       const value = computed.getPropertyValue(prop);
-      if (value && value.includes('oklch')) {
-        cloneEl.style.setProperty(prop, resolveOklch(value));
+      if (value && hasUnsupportedColorFn(value)) {
+        cloneEl.style.setProperty(prop, resolveColorFns(value));
       }
     }
   }
@@ -152,7 +219,7 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
     const computed = getComputedStyle(pathEl);
     let stroke = computed.getPropertyValue('stroke');
-    stroke = resolveOklch(stroke) || '#b1b1b7';
+    stroke = resolveColorFns(stroke) || '#b1b1b7';
     if (!stroke || stroke === 'transparent' || stroke === 'rgba(0, 0, 0, 0)') {
       stroke = '#b1b1b7';
     }
@@ -186,14 +253,12 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 
 const CANVAS_SCALE = 2;
 
-const OKLCH_RE = /oklch\([^)]*\)/gi;
-
 /**
- * Temporarily rewrite every oklch() occurrence in the live document's
+ * Temporarily rewrite unsupported colour functions in the live document's
  * stylesheets (both inline <style> and external <link>) so that
- * getComputedStyle never returns oklch through any code path.
+ * html2canvas doesn't see oklch/oklab/color-mix syntax.
  *
- * For <link> stylesheets we read their cssRules, patch oklch → hex,
+ * For <link> stylesheets we read their cssRules, patch colours to rgb/rgba,
  * and inject a replacement <style> (disabling the original <link>).
  *
  * Returns an "unpatch" function that restores everything.
@@ -205,15 +270,9 @@ function patchLiveStylesheets(): () => void {
   // 1. Inline <style> elements — rewrite textContent directly
   document.querySelectorAll<HTMLStyleElement>('style').forEach((styleEl) => {
     const text = styleEl.textContent ?? '';
-    if (OKLCH_RE.test(text)) {
+    if (hasUnsupportedColorFn(text)) {
       const original = text;
-      OKLCH_RE.lastIndex = 0;
-      styleEl.textContent = text.replace(OKLCH_RE, (match) => {
-        const ctx = getCtx();
-        ctx.fillStyle = '#000000';
-        ctx.fillStyle = match;
-        return ctx.fillStyle;
-      });
+      styleEl.textContent = resolveColorFns(text);
       undos.push(() => { styleEl.textContent = original; });
     }
   });
@@ -237,15 +296,8 @@ function patchLiveStylesheets(): () => void {
       return; // CORS — cannot read rules
     }
 
-    if (!OKLCH_RE.test(cssText)) return;
-    OKLCH_RE.lastIndex = 0;
-
-    const patched = cssText.replace(OKLCH_RE, (match) => {
-      const ctx = getCtx();
-      ctx.fillStyle = '#000000';
-      ctx.fillStyle = match;
-      return ctx.fillStyle;
-    });
+    if (!hasUnsupportedColorFn(cssText)) return;
+    const patched = resolveColorFns(cssText);
 
     // Disable original <link> and inject replacement <style>
     linkEl.disabled = true;
@@ -269,8 +321,7 @@ async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
 
   // Patch live stylesheets BEFORE html2canvas clones the DOM.
-  // This eliminates oklch at the CSS source, so getComputedStyle
-  // never returns oklch through any code path.
+  // This eliminates unsupported colour syntax at the CSS source.
   const unpatchStylesheets = patchLiveStylesheets();
 
   let baseCanvas: HTMLCanvasElement;
