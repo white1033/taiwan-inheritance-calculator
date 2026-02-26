@@ -102,6 +102,22 @@ function resolveColorFns(value: string): string {
   return out;
 }
 
+function waitForNextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+async function waitForFontsReady(): Promise<void> {
+  const fonts = document.fonts;
+  if (!fonts || !fonts.ready) return;
+  try {
+    await fonts.ready;
+  } catch {
+    // Ignore and proceed with current fallback fonts.
+  }
+}
+
 function patchClone(clonedDoc: Document, clone: HTMLElement) {
   // Hide ReactFlow UI chrome in the clone
   for (const sel of ['.react-flow__controls', '.react-flow__background', '.react-flow__minimap', '.react-flow__handle', '.no-print']) {
@@ -109,6 +125,12 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
       el.style.display = 'none';
     });
   }
+
+  // Keep node text visually clipped inside card bounds in exported image.
+  clonedDoc.querySelectorAll<HTMLElement>('.react-flow__node').forEach((el) => {
+    el.style.overflow = 'hidden';
+    el.style.boxSizing = 'border-box';
+  });
 
   // --- Phase 1: Replace all stylesheets with html2canvas-safe colours ---
   const cssTexts: string[] = [];
@@ -252,6 +274,7 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
 }
 
 const CANVAS_SCALE = 2;
+const CROP_PADDING_PX = 48;
 
 /**
  * Temporarily rewrite unsupported colour functions in the live document's
@@ -317,8 +340,54 @@ function patchLiveStylesheets(): () => void {
   };
 }
 
+function cropCanvasToNodeBounds(
+  canvas: HTMLCanvasElement,
+  element: HTMLElement,
+  canvasScale: number,
+): HTMLCanvasElement {
+  const elemRect = element.getBoundingClientRect();
+  const nodes = element.querySelectorAll<HTMLElement>('.react-flow__node');
+  if (nodes.length === 0) return canvas;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const node of Array.from(nodes)) {
+    const r = node.getBoundingClientRect();
+    minX = Math.min(minX, r.left - elemRect.left);
+    minY = Math.min(minY, r.top - elemRect.top);
+    maxX = Math.max(maxX, r.right - elemRect.left);
+    maxY = Math.max(maxY, r.bottom - elemRect.top);
+  }
+
+  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return canvas;
+
+  const padding = CROP_PADDING_PX * canvasScale;
+  const sx = Math.max(0, Math.floor(minX * canvasScale - padding));
+  const sy = Math.max(0, Math.floor(minY * canvasScale - padding));
+  const ex = Math.min(canvas.width, Math.ceil(maxX * canvasScale + padding));
+  const ey = Math.min(canvas.height, Math.ceil(maxY * canvasScale + padding));
+  const sw = Math.max(1, ex - sx);
+  const sh = Math.max(1, ey - sy);
+
+  const out = document.createElement('canvas');
+  out.width = sw;
+  out.height = sh;
+  const outCtx = out.getContext('2d');
+  if (!outCtx) return canvas;
+
+  outCtx.fillStyle = '#ffffff';
+  outCtx.fillRect(0, 0, sw, sh);
+  outCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return out;
+}
+
 async function captureElement(element: HTMLElement) {
   const { default: html2canvas } = await import('html2canvas');
+  await waitForFontsReady();
+  await waitForNextFrame();
 
   // Patch live stylesheets BEFORE html2canvas clones the DOM.
   // This eliminates unsupported colour syntax at the CSS source.
@@ -330,6 +399,7 @@ async function captureElement(element: HTMLElement) {
     baseCanvas = await html2canvas(element, {
       scale: CANVAS_SCALE,
       useCORS: true,
+      backgroundColor: '#ffffff',
       logging: false,
       onclone: patchClone,
     });
@@ -363,7 +433,7 @@ async function captureElement(element: HTMLElement) {
     ctx.drawImage(baseCanvas, sx, sy, sw, sh, sx, sy, sw, sh);
   }
 
-  return finalCanvas;
+  return cropCanvasToNodeBounds(finalCanvas, element, CANVAS_SCALE);
 }
 
 export async function exportToPdf(elementId: string, filename: string) {
