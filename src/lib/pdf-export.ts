@@ -207,7 +207,7 @@ function patchGetComputedStyle(): () => void {
     const cs = original.call(window, elt, pseudoElt);
 
     return new Proxy(cs, {
-      get(target, prop, receiver) {
+      get(target, prop) {
         // getPropertyValue — intercept to resolve oklch
         if (prop === 'getPropertyValue') {
           return function (name: string) {
@@ -220,8 +220,9 @@ function patchGetComputedStyle(): () => void {
           return target[Number(prop) as unknown as keyof CSSStyleDeclaration];
         }
 
-        // length, item, etc. — delegate
-        const value = Reflect.get(target, prop, receiver);
+        // Use target (not receiver/proxy) so native getters get the
+        // real CSSStyleDeclaration as `this` — avoids "Illegal invocation".
+        const value = Reflect.get(target, prop, target);
         if (typeof value === 'function') {
           return value.bind(target);
         }
