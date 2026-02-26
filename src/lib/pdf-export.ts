@@ -159,6 +159,19 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   styleEl.textContent = patched;
   clonedDoc.head.appendChild(styleEl);
 
+  // Export-only visual cleanup to reduce Chromium shadow artifacts.
+  const exportStyle = clonedDoc.createElement('style');
+  exportStyle.textContent = `
+    .react-flow__node {
+      box-shadow: none !important;
+      filter: none !important;
+    }
+    .react-flow__node button {
+      display: none !important;
+    }
+  `;
+  clonedDoc.head.appendChild(exportStyle);
+
   // --- Phase 2: Inline computed colours ---
   // Chrome's getComputedStyle can return oklch()/oklab() values for any colour
   // property. Instead of maintaining a fixed list, scan all computed
@@ -277,8 +290,14 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
   }
 }
 
-const CANVAS_SCALE = 2;
+const MIN_CANVAS_SCALE = 2.5;
+const MAX_CANVAS_SCALE = 3.5;
 const CROP_PADDING_PX = 48;
+
+function getCanvasScale(): number {
+  const dpr = Number.isFinite(window.devicePixelRatio) ? window.devicePixelRatio : 1;
+  return Math.min(MAX_CANVAS_SCALE, Math.max(MIN_CANVAS_SCALE, dpr * 2));
+}
 
 /**
  * Temporarily rewrite unsupported colour functions in the live document's
@@ -393,6 +412,7 @@ async function captureElement(element: HTMLElement) {
   await waitForFontsReady();
   await fitTreeViewForExport();
   await waitForNextFrame();
+  const canvasScale = getCanvasScale();
 
   // Patch live stylesheets BEFORE html2canvas clones the DOM.
   // This eliminates unsupported colour syntax at the CSS source.
@@ -402,7 +422,7 @@ async function captureElement(element: HTMLElement) {
   try {
     // html2canvas renders background + nodes (but not SVG edges)
     baseCanvas = await html2canvas(element, {
-      scale: CANVAS_SCALE,
+      scale: canvasScale,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -422,7 +442,7 @@ async function captureElement(element: HTMLElement) {
   ctx.drawImage(baseCanvas, 0, 0);
 
   // Step 2: Draw edges on top
-  drawEdgesOnCanvas(finalCanvas, element, CANVAS_SCALE);
+  drawEdgesOnCanvas(finalCanvas, element, canvasScale);
 
   // Step 3: Re-stamp node card regions from the original render on top
   // of the edges, so nodes cover edges — matching the browser z-order.
@@ -430,15 +450,15 @@ async function captureElement(element: HTMLElement) {
   const nodes = element.querySelectorAll('.react-flow__node');
   for (const node of Array.from(nodes)) {
     const r = (node as HTMLElement).getBoundingClientRect();
-    const sx = (r.left - elemRect.left) * CANVAS_SCALE;
-    const sy = (r.top - elemRect.top) * CANVAS_SCALE;
-    const sw = r.width * CANVAS_SCALE;
-    const sh = r.height * CANVAS_SCALE;
+    const sx = (r.left - elemRect.left) * canvasScale;
+    const sy = (r.top - elemRect.top) * canvasScale;
+    const sw = r.width * canvasScale;
+    const sh = r.height * canvasScale;
     // Copy the node rectangle from baseCanvas and paste on top of edges
     ctx.drawImage(baseCanvas, sx, sy, sw, sh, sx, sy, sw, sh);
   }
 
-  return cropCanvasToNodeBounds(finalCanvas, element, CANVAS_SCALE);
+  return cropCanvasToNodeBounds(finalCanvas, element, canvasScale);
 }
 
 async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {

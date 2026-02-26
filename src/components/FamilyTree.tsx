@@ -79,7 +79,7 @@ export function FamilyTree() {
       event.preventDefault();
       setContextMenu({ x: event.clientX, y: event.clientY, personId, isDecedent });
     },
-    [state.persons],
+    [],
   );
 
   const onAddChild = useCallback(
