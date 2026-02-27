@@ -262,4 +262,13 @@ describe('validate', () => {
     const errors = validate(persons, decedent);
     expect(hasError(errors, '3', 'relation')).toBe(true);
   });
+
+  it('errors when 子女 with 一般繼承 has parentId', () => {
+    const persons: Person[] = [
+      { id: '1', name: '子女A', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '孫', relation: '子女', status: '一般繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'status')).toBe(true);
+  });
 });

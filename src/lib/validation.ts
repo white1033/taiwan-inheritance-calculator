@@ -89,6 +89,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       errors.push({ personId: p.id, field: 'relation', message: '子女之配偶必須隸屬於一位子女' });
     }
 
+    // 子女 with parentId must be 代位繼承 or 再轉繼承 (not 一般繼承/拋棄繼承)
+    if (p.relation === '子女' && p.parentId && p.status !== '代位繼承' && p.status !== '再轉繼承') {
+      errors.push({ personId: p.id, field: 'status', message: '子女有上層繼承人時，狀態須為代位繼承或再轉繼承' });
+    }
+
     if ((p.status === '死亡' || p.status === '死亡絕嗣') && !p.deathDate) {
       errors.push({ personId: p.id, field: 'deathDate', message: '死亡狀態必須填寫死亡日期' });
     }
