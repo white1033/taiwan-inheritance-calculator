@@ -132,6 +132,9 @@ function fromBase64Url(str: string): Uint8Array {
 
 // --- Compression helpers ---
 
+/** Maximum decompressed payload size (1 MB). Prevents decompression bombs. */
+const MAX_DECOMPRESSED_BYTES = 1 * 1024 * 1024;
+
 async function compress(data: Uint8Array): Promise<Uint8Array> {
   const cs = new CompressionStream('deflate-raw');
   const writer = cs.writable.getWriter();
@@ -161,12 +164,17 @@ async function decompress(data: Uint8Array): Promise<Uint8Array> {
   writer.close();
   const reader = ds.readable.getReader();
   const chunks: Uint8Array[] = [];
+  let totalLen = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    totalLen += value.length;
+    if (totalLen > MAX_DECOMPRESSED_BYTES) {
+      reader.releaseLock();
+      throw new Error(`Decompressed data exceeds limit of ${MAX_DECOMPRESSED_BYTES} bytes`);
+    }
     chunks.push(value);
   }
-  const totalLen = chunks.reduce((sum, c) => sum + c.length, 0);
   const result = new Uint8Array(totalLen);
   let offset = 0;
   for (const chunk of chunks) {
@@ -201,8 +209,16 @@ function isValidShareState(obj: unknown): obj is ShareState {
   if (!obj || typeof obj !== 'object') return false;
   const o = obj as Record<string, unknown>;
   if (!o.decedent || typeof o.decedent !== 'object') return false;
+  const dec = o.decedent as Record<string, unknown>;
+  if (typeof dec.name !== 'string') return false;
   if (!Array.isArray(o.persons)) return false;
-  return true;
+  return (o.persons as unknown[]).every((item: unknown) => {
+    if (!item || typeof item !== 'object') return false;
+    const p = item as Record<string, unknown>;
+    if (typeof p.relation !== 'string' || !(RELATIONS as string[]).includes(p.relation)) return false;
+    if (typeof p.status !== 'string' || !(STATUSES as string[]).includes(p.status)) return false;
+    return true;
+  });
 }
 
 const V2_PREFIX = '2';

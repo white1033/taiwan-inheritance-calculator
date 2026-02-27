@@ -175,4 +175,182 @@ describe('url-state', () => {
     expect(decoded).not.toBeNull();
     expect(decoded!.persons[0].divorceDate).toBe('2020-05-15');
   });
+
+  it('rejects decompression bomb (oversized payload)', async () => {
+    // Create a large repetitive payload that compresses very small but decompresses large
+    // 2 MB of repeated data (exceeds the 1 MB limit)
+    const bigString = 'A'.repeat(2 * 1024 * 1024);
+    const raw = new TextEncoder().encode(bigString);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // Both v1 and v2 paths use decompress, test with v1 prefix
+    const result = await decodeState('1' + b64);
+    expect(result).toBeNull();
+  });
+
+  it('rejects v1 format with invalid relation', async () => {
+    const state = {
+      decedent: { id: 'd1', name: '測試人' },
+      persons: [{ id: 'p1', name: '子A', relation: 'INVALID_RELATION', status: '一般繼承' }],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const result = await decodeState('1' + b64);
+    expect(result).toBeNull();
+  });
+
+  it('rejects v1 format with invalid status', async () => {
+    const state = {
+      decedent: { id: 'd1', name: '測試人' },
+      persons: [{ id: 'p1', name: '子A', relation: '子女', status: 'INVALID_STATUS' }],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const result = await decodeState('1' + b64);
+    expect(result).toBeNull();
+  });
+
+  it('rejects v1 format with missing decedent name', async () => {
+    const state = {
+      decedent: { id: 'd1' },
+      persons: [],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const result = await decodeState('1' + b64);
+    expect(result).toBeNull();
+  });
+
+  it('accepts v1 format with valid relation and status', async () => {
+    const state = {
+      decedent: { id: 'd1', name: '有效測試' },
+      persons: [
+        { id: 'p1', name: '配偶A', relation: '配偶', status: '一般繼承' },
+        { id: 'p2', name: '子B', relation: '子女', status: '死亡' },
+        { id: 'p3', name: '孫C', relation: '子女', status: '代位繼承', parentId: 'p2' },
+      ],
+    };
+    const json = JSON.stringify(state);
+    const raw = new TextEncoder().encode(json);
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(raw);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+    let binary = '';
+    for (const byte of compressed) {
+      binary += String.fromCharCode(byte);
+    }
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const decoded = await decodeState('1' + b64);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.decedent.name).toBe('有效測試');
+    expect(decoded!.persons).toHaveLength(3);
+    expect(decoded!.persons[0].relation).toBe('配偶');
+    expect(decoded!.persons[1].status).toBe('死亡');
+    expect(decoded!.persons[2].status).toBe('代位繼承');
+  });
 });

@@ -3,6 +3,9 @@ import { frac, add, subtract, divide, multiply, equals, ZERO, ONE } from './frac
 import type { Person, Decedent, Relation } from '../types/models';
 import { getOrder } from '../types/models';
 
+/** Maximum recursion depth to prevent stack overflow on crafted input. */
+const MAX_DEPTH = 100;
+
 /**
  * Result of inheritance share calculation for a single person.
  */
@@ -51,7 +54,8 @@ function reservedRatio(relation: Relation): Fraction {
  * A "living" descendant is one who is not 拋棄繼承, 死亡, or 死亡絕嗣,
  * or who is dead but has their own living descendants.
  */
-function hasLivingDescendant(personId: string, persons: Person[], visited = new Set<string>()): boolean {
+function hasLivingDescendant(personId: string, persons: Person[], visited = new Set<string>(), depth = 0): boolean {
+  if (depth > MAX_DEPTH) return false;
   if (visited.has(personId)) return false;
   visited.add(personId);
   const children = persons.filter(p => p.parentId === personId);
@@ -59,7 +63,7 @@ function hasLivingDescendant(personId: string, persons: Person[], visited = new 
     if (child.status !== '拋棄繼承' && child.status !== '死亡' && child.status !== '死亡絕嗣') {
       return true;
     }
-    if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons, visited)) {
+    if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons, visited, depth + 1)) {
       return true;
     }
   }
@@ -320,7 +324,10 @@ function distributeShare(
   persons: Person[],
   results: CalculationResult[],
   visited: Set<string>,
+  depth = 0,
 ): void {
+  if (depth > MAX_DEPTH) return;
+
   const subHeirs = persons.filter(
     p => p.status === status && p.parentId === parentId
   );
@@ -343,7 +350,7 @@ function distributeShare(
     if (hasOwnSubHeirs) {
       // This heir is dead with sub-heirs — record zero and recurse
       pushZeroResult(heir, results);
-      distributeShare(heir.id, perHeir, status, persons, results, visited);
+      distributeShare(heir.id, perHeir, status, persons, results, visited, depth + 1);
     } else {
       pushShareResult(heir, perHeir, results);
     }
@@ -361,7 +368,10 @@ function processSlotHolder(
   persons: Person[],
   results: CalculationResult[],
   visited = new Set<string>(),
+  depth = 0,
 ): void {
+  if (depth > MAX_DEPTH) return;
+
   if (visited.has(holder.id)) {
     pushZeroResult(holder, results);
     return;
@@ -372,9 +382,9 @@ function processSlotHolder(
     pushShareResult(holder, slotShare, results);
   } else if (holder.status === '死亡' || holder.status === '死亡絕嗣') {
     pushZeroResult(holder, results);
-    distributeShare(holder.id, slotShare, '代位繼承', persons, results, visited);
+    distributeShare(holder.id, slotShare, '代位繼承', persons, results, visited, depth + 1);
   } else if (holder.status === '再轉繼承') {
     pushZeroResult(holder, results);
-    distributeShare(holder.id, slotShare, '再轉繼承', persons, results, visited);
+    distributeShare(holder.id, slotShare, '再轉繼承', persons, results, visited, depth + 1);
   }
 }

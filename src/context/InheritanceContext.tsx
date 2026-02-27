@@ -1,6 +1,7 @@
 import { useReducer, useMemo, useEffect, type ReactNode } from 'react';
 import { InheritanceStateContext, InheritanceDispatchContext } from './InheritanceContextValue';
 import type { Person, Decedent, Relation } from '../types/models';
+import { RELATION_OPTIONS, INHERITANCE_STATUS_OPTIONS } from '../types/models';
 import { calculateShares, type CalculationResult } from '../lib/inheritance';
 import { validate, type ValidationError } from '../lib/validation';
 import { readHashState } from '../lib/url-state';
@@ -43,7 +44,14 @@ function loadFromStorage(): Snapshot | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Snapshot;
-    if (!parsed.decedent || !Array.isArray(parsed.persons)) return null;
+    if (!parsed.decedent || typeof parsed.decedent !== 'object') return null;
+    if (typeof parsed.decedent.id !== 'string' || typeof parsed.decedent.name !== 'string') return null;
+    if (!Array.isArray(parsed.persons)) return null;
+    for (const p of parsed.persons) {
+      if (!p || typeof p !== 'object') return null;
+      if (!RELATION_OPTIONS.includes(p.relation)) return null;
+      if (!INHERITANCE_STATUS_OPTIONS.includes(p.status)) return null;
+    }
     return { decedent: parsed.decedent, persons: parsed.persons };
   } catch {
     return null;
@@ -261,10 +269,13 @@ export function InheritanceProvider({ children }: { children: ReactNode }) {
 
   // Derived state: only recomputed when decedent or persons change,
   // NOT on SELECT_PERSON or other non-data actions.
-  const results = useMemo(
-    () => calculateShares(coreState.decedent, coreState.persons),
-    [coreState.decedent, coreState.persons],
-  );
+  const results = useMemo(() => {
+    try {
+      return calculateShares(coreState.decedent, coreState.persons);
+    } catch {
+      return [];
+    }
+  }, [coreState.decedent, coreState.persons]);
   const validationErrors = useMemo(
     () => validate(coreState.persons, coreState.decedent),
     [coreState.persons, coreState.decedent],
