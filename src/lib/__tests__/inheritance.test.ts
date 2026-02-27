@@ -620,6 +620,39 @@ describe('calculateShares', () => {
     });
   });
 
+  describe('Grandchild with living parent should not inherit', () => {
+    it('grandchild with parentId + 一般繼承 gets zero share', () => {
+      // 配偶 + 子女A(活) + 子女B(活) + 孫(一般繼承, parentId→A)
+      // 孫 should NOT count as a slot — only 配偶 + A + B = 3 slots
+      const persons: Person[] = [
+        { id: '1', name: '配偶', relation: '配偶', status: '一般繼承' },
+        { id: '2', name: '子女A', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '子女B', relation: '子女', status: '一般繼承' },
+        { id: '4', name: '孫', relation: '子女', status: '一般繼承', parentId: '2' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶', 1, 3);
+      expectShare(results, '子女A', 1, 3);
+      expectShare(results, '子女B', 1, 3);
+      expectShare(results, '孫', 0, 1);
+    });
+
+    it('multiple grandchildren with parentId + 一般繼承 all get zero', () => {
+      // No spouse, 2 children alive, 2 grandchildren under child A
+      const persons: Person[] = [
+        { id: '1', name: '子女A', relation: '子女', status: '一般繼承' },
+        { id: '2', name: '子女B', relation: '子女', status: '一般繼承' },
+        { id: '3', name: '孫1', relation: '子女', status: '一般繼承', parentId: '1' },
+        { id: '4', name: '孫2', relation: '子女', status: '一般繼承', parentId: '1' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '子女A', 1, 2);
+      expectShare(results, '子女B', 1, 2);
+      expectShare(results, '孫1', 0, 1);
+      expectShare(results, '孫2', 0, 1);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('no persons at all: returns empty array', () => {
       const results = calculateShares(decedent, []);
