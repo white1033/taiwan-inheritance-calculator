@@ -100,4 +100,25 @@ describe('PersonNode', () => {
     renderNode({ isDecedent: true });
     expect(screen.queryByLabelText('刪除')).not.toBeInTheDocument();
   });
+
+  it('hides date rows when values are empty (non-decedent)', () => {
+    renderNode({ birthDate: undefined, deathDate: undefined, marriageDate: undefined, divorceDate: undefined });
+    expect(screen.queryByText(/出生/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/死亡/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/結婚/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/離婚/)).not.toBeInTheDocument();
+  });
+
+  it('shows only date rows that have values', () => {
+    renderNode({ birthDate: '1990-01-01', deathDate: undefined, marriageDate: '2015-06-01', divorceDate: undefined });
+    expect(screen.getByText(/出生/)).toBeInTheDocument();
+    expect(screen.queryByText(/死亡/)).not.toBeInTheDocument();
+    expect(screen.getByText(/結婚/)).toBeInTheDocument();
+    expect(screen.queryByText(/離婚/)).not.toBeInTheDocument();
+  });
+
+  it('always shows death date for decedent', () => {
+    renderNode({ isDecedent: true, deathDate: undefined });
+    expect(screen.getByText(/死亡/)).toBeInTheDocument();
+  });
 });

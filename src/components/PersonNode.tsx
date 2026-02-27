@@ -122,25 +122,34 @@ export const PersonNode = memo(function PersonNode({
         </div>
       </div>
 
-      <div className="px-3 py-1 border-t border-slate-100 text-xs text-slate-500 space-y-0.5">
-        {data.isDecedent ? (
-          <>
-            <div>死亡：{formatDate(data.deathDate)}</div>
-            {data.estateAmount != null && data.estateAmount > 0 && (
-              <div className="text-slate-700 font-semibold">
-                遺產：{data.estateAmount.toLocaleString()} 元
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div>出生：{formatDate(data.birthDate)}</div>
-            <div>死亡：{formatDate(data.deathDate)}</div>
-            <div>結婚：{formatDate(data.marriageDate)}</div>
-            <div>離婚：{formatDate(data.divorceDate)}</div>
-          </>
-        )}
-      </div>
+      {data.isDecedent ? (
+        <div className="px-3 py-1 border-t border-slate-100 text-xs text-slate-500 space-y-0.5">
+          <div>死亡：{formatDate(data.deathDate)}</div>
+          {data.estateAmount != null && data.estateAmount > 0 && (
+            <div className="text-slate-700 font-semibold">
+              遺產：{data.estateAmount.toLocaleString()} 元
+            </div>
+          )}
+        </div>
+      ) : (
+        (() => {
+          const dateRows: [string, string | undefined][] = [
+            ['出生', data.birthDate],
+            ['死亡', data.deathDate],
+            ['結婚', data.marriageDate],
+            ['離婚', data.divorceDate],
+          ];
+          const filled = dateRows.filter(([, v]) => v);
+          if (filled.length === 0) return null;
+          return (
+            <div className="px-3 py-1 border-t border-slate-100 text-xs text-slate-500 space-y-0.5">
+              {filled.map(([label, value]) => (
+                <div key={label}>{label}：{value}</div>
+              ))}
+            </div>
+          );
+        })()
+      )}
 
       {!data.isDecedent && data.inheritanceShare && data.inheritanceShare.n > 0 && (
         <div className="px-3 py-2 border-t border-slate-100 text-xs">
