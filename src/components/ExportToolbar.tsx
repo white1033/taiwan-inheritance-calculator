@@ -1,11 +1,4 @@
-import { useState } from 'react';
-import { useInheritance } from '../hooks/useInheritance';
-import { exportToExcel } from '../lib/excel';
-import { exportToPng, printPage } from '../lib/pdf-export';
-import { useToast } from '../hooks/useToast';
-import { buildShareUrl } from '../lib/url-state';
-
-type LoadingAction = 'print' | 'excel' | 'png' | null;
+import { useExport, type ExportAction } from '../hooks/useExport';
 
 function Spinner() {
   return (
@@ -17,41 +10,10 @@ function Spinner() {
 }
 
 export function ExportToolbar() {
-  const { state } = useInheritance();
-  const { toast } = useToast();
-  const hasErrors = state.validationErrors.length > 0;
-  const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
+  const { handlePrint, handleExcel, handlePng, handleShareLink, loadingAction, hasErrors } =
+    useExport();
 
-  async function guardedExport(action: LoadingAction, fn: () => Promise<void>) {
-    if (hasErrors) {
-      toast('請先修正所有驗證錯誤後再匯出', 'error');
-      return;
-    }
-    setLoadingAction(action);
-    try {
-      await fn();
-    } finally {
-      setLoadingAction(null);
-    }
-  }
-
-  async function handleExcelExport() {
-    try {
-      await exportToExcel(state.decedent, state.persons);
-    } catch (err) {
-      toast('Excel 匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
-    }
-  }
-
-  async function handlePngExport() {
-    try {
-      await exportToPng('family-tree', '繼承系統圖.png');
-    } catch (err) {
-      toast('圖片匯出失敗：' + (err instanceof Error ? err.message : '未知錯誤'), 'error');
-    }
-  }
-
-  const btnClass = (action: LoadingAction) =>
+  const btnClass = (action: ExportAction) =>
     `px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px] ${
       hasErrors || loadingAction ? 'opacity-40 cursor-not-allowed' : ''
     }${loadingAction === action ? ' pointer-events-none' : ''}`;
@@ -61,7 +23,7 @@ export function ExportToolbar() {
       <button
         type="button"
         disabled={hasErrors || !!loadingAction}
-        onClick={() => guardedExport('print', () => printPage('family-tree'))}
+        onClick={handlePrint}
         className={btnClass('print')}
       >
         {loadingAction === 'print' && <Spinner />}
@@ -70,7 +32,7 @@ export function ExportToolbar() {
       <button
         type="button"
         disabled={hasErrors || !!loadingAction}
-        onClick={() => guardedExport('excel', handleExcelExport)}
+        onClick={handleExcel}
         className={btnClass('excel')}
       >
         {loadingAction === 'excel' && <Spinner />}
@@ -79,7 +41,7 @@ export function ExportToolbar() {
       <button
         type="button"
         disabled={hasErrors || !!loadingAction}
-        onClick={() => guardedExport('png', handlePngExport)}
+        onClick={handlePng}
         className={btnClass('png')}
       >
         {loadingAction === 'png' && <Spinner />}
@@ -87,15 +49,7 @@ export function ExportToolbar() {
       </button>
       <button
         type="button"
-        onClick={async () => {
-          try {
-            const url = await buildShareUrl(state.decedent, state.persons);
-            await navigator.clipboard.writeText(url);
-            toast('已複製分享連結到剪貼簿', 'success');
-          } catch {
-            toast('複製失敗，請手動複製', 'error');
-          }
-        }}
+        onClick={handleShareLink}
         className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm hover:bg-slate-50 transition-colors whitespace-nowrap min-h-[44px]"
       >
         複製分享連結
