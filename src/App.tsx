@@ -3,7 +3,6 @@ import { InheritanceProvider } from './context/InheritanceContext.tsx';
 import { Header } from './components/Header.tsx';
 import { LeftPanel } from './components/LeftPanel.tsx';
 import { FamilyTree } from './components/FamilyTree.tsx';
-import { ExportToolbar } from './components/ExportToolbar.tsx';
 import { ToastProvider } from './components/Toast.tsx';
 import { useUndoRedoShortcuts } from './hooks/useUndoRedoShortcuts.ts';
 import { useInheritance } from './hooks/useInheritance.ts';
@@ -39,10 +38,6 @@ function AppContent() {
           <main id="family-tree" className="flex-1 relative">
             <FamilyTree />
           </main>
-        </div>
-        <ExportToolbar />
-        <div className="no-print bg-slate-100 border-t border-slate-200 px-3 py-1.5 text-center text-xs text-slate-400 landscape-hide">
-          本工具僅供參考，計算結果不構成法律意見。實際繼承事務請諮詢專業律師或地政士。
         </div>
       </div>
     </ToastProvider>
