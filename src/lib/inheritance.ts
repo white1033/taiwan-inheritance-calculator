@@ -84,8 +84,8 @@ function determineActiveOrder(persons: Person[]): number | null {
       // Only consider direct heirs in this order, not sub-heirs (those with parentId
       // who are 代位繼承 or 再轉繼承 sub-heirs)
       if (p.status === '代位繼承' || (p.status === '再轉繼承' && p.parentId)) return false;
-      // Exclude persons with parentId who are not 代位/再轉 sub-heirs (e.g. grandchildren with 一般繼承)
-      if (p.parentId && p.status !== '代位繼承' && p.status !== '再轉繼承') return false;
+      // Exclude remaining persons with parentId (e.g. grandchildren with 一般繼承)
+      if (p.parentId) return false;
       return true;
     });
 
@@ -162,8 +162,8 @@ export function calculateShares(decedent: Decedent, persons: Person[]): Calculat
         if (pOrder !== activeOrder) return false;
         if (p.status === '代位繼承') return false;
         if (p.status === '再轉繼承' && p.parentId) return false;
-        // Exclude persons with parentId who are not 代位/再轉 sub-heirs
-        if (p.parentId && p.status !== '代位繼承' && p.status !== '再轉繼承') return false;
+        // Exclude remaining persons with parentId (e.g. grandchildren with 一般繼承)
+        if (p.parentId) return false;
         if (p.status === '拋棄繼承') return false;
         if (p.status === '死亡' || p.status === '死亡絕嗣') {
           return hasLivingDescendant(p.id, persons);
