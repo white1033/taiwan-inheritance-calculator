@@ -651,14 +651,6 @@ export const PRESETS: Preset[] = [
         parentId: 'preset_16_2',
       },
       {
-        id: 'preset_16_5',
-        name: '葉小明',
-        relation: '子女',
-        status: '一般繼承',
-        birthDate: '2015-01-10',
-        parentId: 'preset_16_2',
-      },
-      {
         id: 'preset_16_6',
         name: '葉小芳',
         relation: '子女',

@@ -170,7 +170,7 @@ export const PersonNode = memo(function PersonNode({
         </div>
       )}
 
-      {!data.isDecedent && data.relation === '子女' && data.status !== '死亡絕嗣' && (
+      {!data.isDecedent && data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承') && (
         <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button
             type="button"
