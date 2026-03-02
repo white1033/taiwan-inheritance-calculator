@@ -9,11 +9,14 @@ export function computeAvailableStatuses(
   persons: Person[],
   decedent?: Decedent,
 ): InheritanceStatus[] {
+  // 子女之配偶 can only ever be 再轉繼承 — skip backward compat entirely
+  if (person.relation === '子女之配偶') {
+    return ['再轉繼承'];
+  }
+
   let options: InheritanceStatus[];
 
-  if (person.relation === '子女之配偶') {
-    options = ['再轉繼承'];
-  } else if (!person.parentId) {
+  if (!person.parentId) {
     // Top-level heir: neither 代位繼承 nor sub-heir 再轉繼承 applies
     options = ['一般繼承', '死亡', '死亡絕嗣', '拋棄繼承'];
   } else {

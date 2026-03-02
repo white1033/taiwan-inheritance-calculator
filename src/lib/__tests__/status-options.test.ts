@@ -97,4 +97,33 @@ describe('computeAvailableStatuses', () => {
     const result = computeAvailableStatuses(child, [parent, child], decedent);
     expect(result).toContain('代位繼承');
   });
+
+  it('top-level person includes 死亡絕嗣', () => {
+    const p: Person = { id: '1', name: 'A', relation: '子女', status: '一般繼承' };
+    const result = computeAvailableStatuses(p, [p], decedent);
+    expect(result).toContain('死亡絕嗣');
+  });
+
+  it('子女之配偶 with stale status → still only 再轉繼承 (no backward compat)', () => {
+    const parent: Person = { id: 'p', name: '父', relation: '子女', status: '死亡', deathDate: '2024-06-01' };
+    const spouse: Person = { id: 's', name: '媳婦', relation: '子女之配偶', status: '一般繼承', parentId: 'p' };
+    const result = computeAvailableStatuses(spouse, [parent, spouse], decedent);
+    expect(result).toEqual(['再轉繼承']);
+  });
+
+  it('sub-heir with non-existent parentId → fallback list', () => {
+    const child: Person = { id: 'c', name: '子', relation: '子女', status: '代位繼承', parentId: 'does-not-exist' };
+    const result = computeAvailableStatuses(child, [child], decedent);
+    expect(result).toContain('代位繼承');
+    expect(result).toContain('再轉繼承');
+  });
+
+  it('decedent without deathDate → treats 死亡 parent as before decedent', () => {
+    const decedentNoDeath: Decedent = { id: 'D', name: '王大明' };
+    const parent: Person = { id: 'p', name: '父', relation: '子女', status: '死亡', deathDate: '2024-06-01' };
+    const child: Person = { id: 'c', name: '子', relation: '子女', status: '代位繼承', parentId: 'p' };
+    const result = computeAvailableStatuses(child, [parent, child], decedentNoDeath);
+    expect(result).toContain('代位繼承');
+    expect(result).not.toContain('再轉繼承');
+  });
 });
