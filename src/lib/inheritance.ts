@@ -60,7 +60,10 @@ function hasLivingDescendant(personId: string, persons: Person[], visited = new 
   visited.add(personId);
   const children = persons.filter(p => p.parentId === personId);
   for (const child of children) {
-    if (child.status !== '拋棄繼承' && child.status !== '死亡' && child.status !== '死亡絕嗣') {
+    // Only 代位繼承 and 再轉繼承 sub-heirs can actually receive a share via distributeShare.
+    // 一般繼承 children with parentId are always invalid (validation catches them), so
+    // excluding them here prevents phantom slot creation and the resulting share-sum crash.
+    if (child.status === '代位繼承' || child.status === '再轉繼承') {
       return true;
     }
     if ((child.status === '死亡' || child.status === '死亡絕嗣') && hasLivingDescendant(child.id, persons, visited, depth + 1)) {

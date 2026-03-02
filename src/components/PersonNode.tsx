@@ -90,10 +90,15 @@ export const PersonNode = memo(function PersonNode({
       )}
 
       <div className="px-3 pt-3 pb-2">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs text-slate-500">
-            {data.isDecedent ? '被繼承人' : data.relation}
-          </span>
+        <div className="text-xs text-slate-500 mb-1">
+          {data.isDecedent ? '被繼承人' : data.relation}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div
+            className={`font-semibold text-sm ${data.status === '拋棄繼承' ? 'line-through text-slate-400' : 'text-slate-800'}`}
+          >
+            {data.name || '(未命名)'}
+          </div>
           {data.status === '拋棄繼承' && (
             <span className="text-xs bg-red-100 text-red-600 px-1 rounded cursor-help" title="拋棄繼承：繼承人拋棄繼承權，不參與遺產分配">
               拋棄
@@ -114,11 +119,6 @@ export const PersonNode = memo(function PersonNode({
               絕嗣
             </span>
           )}
-        </div>
-        <div
-          className={`font-semibold text-sm ${data.status === '拋棄繼承' ? 'line-through text-slate-400' : 'text-slate-800'}`}
-        >
-          {data.name || '(未命名)'}
         </div>
       </div>
 

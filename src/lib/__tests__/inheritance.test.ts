@@ -667,6 +667,22 @@ describe('calculateShares', () => {
       expectShare(results, '長子', 0, 1);
     });
 
+    it('死亡 slot holder with 一般繼承 child (invalid parentId): does not crash, share goes to sibling', () => {
+      // A dead parent whose only "child" is an invalid 一般繼承 person with parentId.
+      // hasLivingDescendant must NOT count it as a living descendant (it can't receive shares),
+      // so the dead parent is excluded from slotHolders and its sibling gets the full estate.
+      const persons: Person[] = [
+        { id: '乙', name: '乙', relation: '子女', status: '一般繼承' },
+        { id: '丙', name: '丙', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: 'X', name: 'X', relation: '子女', status: '一般繼承', parentId: '丙' }, // invalid
+      ];
+      const results = calculateShares(decedent, persons);
+      // 丙 has no distributable sub-heirs → excluded from slotHolders → 乙 gets 1/1
+      expectShare(results, '乙', 1, 1);
+      expectShare(results, '丙', 0, 1);
+      expectShare(results, 'X', 0, 1);
+    });
+
     it('死亡 slot holder with 再轉繼承 children (no 代位繼承): distributes share correctly', () => {
       // 丙 died before decedent but grandchildren are incorrectly marked 再轉繼承.
       // The engine must fall back to distributing via 再轉繼承 children so shares sum to 1.
