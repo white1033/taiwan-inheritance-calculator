@@ -213,6 +213,19 @@ describe('validate', () => {
     expect(hasError(errors, '1', 'deathDate')).toBe(false);
   });
 
+  it('no deathDate error for 再轉繼承 sub-heir when parent status is 死亡', () => {
+    // 回歸測試：parent.status === '死亡'（晚於被繼承人死亡）時，
+    // 孫子女 sub-heir 不應被誤判為 origin 而要求填死亡日期
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '死亡', deathDate: '2024-06-01' },
+      { id: '2', name: '孫A', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '3', name: '孫B', relation: '子女', status: '再轉繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'deathDate')).toBe(false);
+    expect(hasError(errors, '3', 'deathDate')).toBe(false);
+  });
+
   it('errors when 再轉繼承 origin died before decedent', () => {
     const persons: Person[] = [
       { id: '1', name: '長子', relation: '子女', status: '再轉繼承', deathDate: '2023-06-01' },

@@ -432,31 +432,17 @@ async function captureElement(element: HTMLElement) {
     unpatchStylesheets();
   }
 
-  // Composite with correct z-order: background → edges → nodes
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width = baseCanvas.width;
   finalCanvas.height = baseCanvas.height;
   const ctx = finalCanvas.getContext('2d')!;
 
-  // Step 1: Draw html2canvas result (background + nodes)
+  // Step 1: Draw html2canvas result (background + nodes; SVG edges are absent)
   ctx.drawImage(baseCanvas, 0, 0);
 
-  // Step 2: Draw edges on top
+  // Step 2: Draw edges on top — must be last so they aren't overwritten.
+  // (html2canvas cannot render SVG paths, so we redraw them manually here.)
   drawEdgesOnCanvas(finalCanvas, element, canvasScale);
-
-  // Step 3: Re-stamp node card regions from the original render on top
-  // of the edges, so nodes cover edges — matching the browser z-order.
-  const elemRect = element.getBoundingClientRect();
-  const nodes = element.querySelectorAll('.react-flow__node');
-  for (const node of Array.from(nodes)) {
-    const r = (node as HTMLElement).getBoundingClientRect();
-    const sx = (r.left - elemRect.left) * canvasScale;
-    const sy = (r.top - elemRect.top) * canvasScale;
-    const sw = r.width * canvasScale;
-    const sh = r.height * canvasScale;
-    // Copy the node rectangle from baseCanvas and paste on top of edges
-    ctx.drawImage(baseCanvas, sx, sy, sw, sh, sx, sy, sw, sh);
-  }
 
   return cropCanvasToNodeBounds(finalCanvas, element, canvasScale);
 }

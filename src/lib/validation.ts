@@ -70,10 +70,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       }
     }
 
-    // 再轉繼承 origin（無 parentId 或 parentId 不是再轉繼承者）需要 deathDate
+    // 再轉繼承 origin（無 parentId，或 parentId 非再轉/死亡）需要 deathDate
+    // sub-heir 的 parent 可為 '再轉繼承' 或 '死亡'，兩者皆不要求 sub-heir 填死亡日期
     if (p.status === '再轉繼承' && !p.deathDate) {
       const parent = p.parentId ? personMap.get(p.parentId) : undefined;
-      const isOrigin = !parent || parent.status !== '再轉繼承';
+      const isOrigin = !parent || (parent.status !== '再轉繼承' && parent.status !== '死亡');
       if (isOrigin) {
         errors.push({ personId: p.id, field: 'deathDate', message: '再轉繼承者必須填寫死亡日期' });
       }
