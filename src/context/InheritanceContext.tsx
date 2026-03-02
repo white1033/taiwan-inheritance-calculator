@@ -142,6 +142,8 @@ function reducer(state: CoreState, action: Action): CoreState {
           }
         } else if (parent.status === '再轉繼承') {
           status = '再轉繼承';
+        } else if (parent.status === '代位繼承') {
+          status = '代位繼承';
         }
       }
       const newPerson: Person = {

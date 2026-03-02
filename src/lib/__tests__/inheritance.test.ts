@@ -699,5 +699,28 @@ describe('calculateShares', () => {
       expectShare(results, 'C', 1, 4);
       expectShare(results, 'D', 1, 4);
     });
+
+    it('multi-level 代位繼承: grandchild who also died splits slot with sibling', () => {
+      // 張大偉 (子女, 死亡 before decedent) → slot = 1/3
+      //   ├─ 張小明 (代位繼承, parentId=張大偉) → also died, has sub-heir → gets 0
+      //   │    └─ Z (代位繼承, parentId=張小明) → gets 1/6
+      //   └─ 張小華 (代位繼承, parentId=張大偉) → alive → gets 1/6
+      // 配偶=1/3, 張大宏=1/3, 張大偉=0, 張小明=0, 張小華=1/6, Z=1/6
+      const persons: Person[] = [
+        { id: 'sp', name: '配偶', relation: '配偶', status: '一般繼承' },
+        { id: 'A', name: '張大宏', relation: '子女', status: '一般繼承' },
+        { id: 'B', name: '張大偉', relation: '子女', status: '死亡', deathDate: '2023-06-01' },
+        { id: 'C', name: '張小明', relation: '子女', status: '代位繼承', parentId: 'B' },
+        { id: 'D', name: '張小華', relation: '子女', status: '代位繼承', parentId: 'B' },
+        { id: 'Z', name: 'Z', relation: '子女', status: '代位繼承', parentId: 'C' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶', 1, 3);
+      expectShare(results, '張大宏', 1, 3);
+      expectShare(results, '張大偉', 0, 1);
+      expectShare(results, '張小明', 0, 1);
+      expectShare(results, '張小華', 1, 6);
+      expectShare(results, 'Z', 1, 6);
+    });
   });
 });

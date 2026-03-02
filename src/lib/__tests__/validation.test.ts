@@ -306,6 +306,17 @@ describe('validate', () => {
     expect(hasError(errors, 'C', 'status')).toBe(true);
   });
 
+  it('no error for multi-level 代位繼承 (代位繼承 parent for 代位繼承 sub-heir)', () => {
+    // 甲 (死亡 before decedent) → 乙 (代位繼承, also intermediate dead) → 丙 (代位繼承, alive)
+    const persons: Person[] = [
+      { id: '甲', name: '甲', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+      { id: '乙', name: '乙', relation: '子女', status: '代位繼承', parentId: '甲' },
+      { id: '丙', name: '丙', relation: '子女', status: '代位繼承', parentId: '乙' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(errors.filter(e => e.personId === '丙' && e.field === 'parentId')).toHaveLength(0);
+  });
+
   it('does not error for 子女之配偶 with 再轉繼承 even if parent died before decedent', () => {
     // 子女之配偶 is display-only and excluded from the date-based status check
     const persons: Person[] = [

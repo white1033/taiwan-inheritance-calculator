@@ -37,8 +37,8 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
         errors.push({ personId: p.id, field: 'parentId', message: '被代位者不存在' });
       } else {
         const parent = personMap.get(p.parentId);
-        if (parent && parent.status !== '死亡' && parent.status !== '死亡絕嗣') {
-          errors.push({ personId: p.id, field: 'parentId', message: '代位繼承的被代位者必須為死亡狀態' });
+        if (parent && parent.status !== '死亡' && parent.status !== '死亡絕嗣' && parent.status !== '代位繼承') {
+          errors.push({ personId: p.id, field: 'parentId', message: '代位繼承的被代位者必須為死亡或代位繼承狀態' });
         }
         // 代位繼承僅限第一順位（民法 §1140），配偶（null order）也不可為被代位者
         if (parent) {
