@@ -284,4 +284,35 @@ describe('validate', () => {
     const errors = validate(persons, decedent);
     expect(hasError(errors, '2', 'status')).toBe(true);
   });
+
+  it('errors when 再轉繼承 sub-heir has 死亡 parent who died before decedent', () => {
+    // 丙 died 2023-01-01 (before decedent 2024-01-01), so C should be 代位繼承 not 再轉繼承
+    const persons: Person[] = [
+      { id: '丙', name: '丙', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+      { id: 'C', name: 'C', relation: '子女', status: '再轉繼承', parentId: '丙' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, 'C', 'status')).toBe(true);
+    expect(errors.some(e => e.personId === 'C' && e.message.includes('代位繼承'))).toBe(true);
+  });
+
+  it('errors when 再轉繼承 sub-heir has 死亡 parent who died same day as decedent', () => {
+    // Same-day death (<=) also triggers the error
+    const persons: Person[] = [
+      { id: '丙', name: '丙', relation: '子女', status: '死亡', deathDate: '2024-01-01' },
+      { id: 'C', name: 'C', relation: '子女', status: '再轉繼承', parentId: '丙' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, 'C', 'status')).toBe(true);
+  });
+
+  it('does not error for 子女之配偶 with 再轉繼承 even if parent died before decedent', () => {
+    // 子女之配偶 is display-only and excluded from the date-based status check
+    const persons: Person[] = [
+      { id: '丙', name: '丙', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+      { id: 'S', name: '丙配偶', relation: '子女之配偶', status: '再轉繼承', parentId: '丙' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(errors.filter(e => e.personId === 'S' && e.field === 'status' && e.message.includes('代位繼承'))).toHaveLength(0);
+  });
 });

@@ -68,6 +68,10 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       if (parent && parent.status !== '再轉繼承' && parent.status !== '死亡') {
         errors.push({ personId: p.id, field: 'parentId', message: '再轉繼承的被繼承者必須為再轉繼承或死亡狀態' });
       }
+      // 若 parent 為「死亡」且死亡日期早於或同日被繼承人，應為代位繼承而非再轉繼承
+      if (p.relation !== '子女之配偶' && parent?.status === '死亡' && parent.deathDate && decedent?.deathDate && parent.deathDate <= decedent.deathDate) {
+        errors.push({ personId: p.id, field: 'status', message: '被繼承者死亡日期早於或同日被繼承人，應為代位繼承而非再轉繼承' });
+      }
     }
 
     // 再轉繼承 origin（無 parentId，或 parentId 非再轉/死亡）需要 deathDate

@@ -666,5 +666,22 @@ describe('calculateShares', () => {
       const results = calculateShares(decedent, persons);
       expectShare(results, '長子', 0, 1);
     });
+
+    it('死亡 slot holder with 再轉繼承 children (no 代位繼承): distributes share correctly', () => {
+      // 丙 died before decedent but grandchildren are incorrectly marked 再轉繼承.
+      // The engine must fall back to distributing via 再轉繼承 children so shares sum to 1.
+      const persons: Person[] = [
+        { id: '乙', name: '乙', relation: '子女', status: '一般繼承' },
+        { id: '丙', name: '丙', relation: '子女', status: '死亡', deathDate: '2023-01-01' },
+        { id: 'C', name: 'C', relation: '子女', status: '再轉繼承', parentId: '丙' },
+        { id: 'D', name: 'D', relation: '子女', status: '再轉繼承', parentId: '丙' },
+      ];
+      const results = calculateShares(decedent, persons);
+      // 乙 gets 1/2; 丙's 1/2 slot falls back to C and D (1/4 each)
+      expectShare(results, '乙', 1, 2);
+      expectShare(results, '丙', 0, 1);
+      expectShare(results, 'C', 1, 4);
+      expectShare(results, 'D', 1, 4);
+    });
   });
 });

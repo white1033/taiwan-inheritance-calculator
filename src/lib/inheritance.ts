@@ -382,7 +382,11 @@ function processSlotHolder(
     pushShareResult(holder, slotShare, results);
   } else if (holder.status === '死亡' || holder.status === '死亡絕嗣') {
     pushZeroResult(holder, results);
-    distributeShare(holder.id, slotShare, '代位繼承', persons, results, visited, depth + 1);
+    // Normally distribute to 代位繼承 children; fall back to 再轉繼承 if none exist.
+    // This handles the case where a child died before the decedent but the user
+    // (or a URL-loaded state) incorrectly assigned 再轉繼承 to grandchildren.
+    const hasProxyChildren = persons.some(p => p.status === '代位繼承' && p.parentId === holder.id);
+    distributeShare(holder.id, slotShare, hasProxyChildren ? '代位繼承' : '再轉繼承', persons, results, visited, depth + 1);
   } else if (holder.status === '再轉繼承') {
     pushZeroResult(holder, results);
     distributeShare(holder.id, slotShare, '再轉繼承', persons, results, visited, depth + 1);
