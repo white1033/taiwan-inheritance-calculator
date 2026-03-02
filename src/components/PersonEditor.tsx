@@ -1,7 +1,8 @@
 import { useInheritance } from '../hooks/useInheritance';
-import { INHERITANCE_STATUS_OPTIONS, RELATION_OPTIONS } from '../types/models';
-import type { Person, Relation, InheritanceStatus } from '../types/models';
+import { RELATION_OPTIONS } from '../types/models';
+import type { Person, Relation } from '../types/models';
 import { countDescendants } from '../lib/person-utils';
+import { computeAvailableStatuses } from '../lib/status-options';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
@@ -49,9 +50,7 @@ export function PersonEditor() {
   );
 
   // Filter status options based on context
-  const availableStatuses: InheritanceStatus[] = person.parentId
-    ? INHERITANCE_STATUS_OPTIONS // sub-heirs can use all statuses
-    : INHERITANCE_STATUS_OPTIONS.filter(s => s !== '代位繼承' && s !== '再轉繼承');
+  const availableStatuses = computeAvailableStatuses(person, state.persons, state.decedent);
 
   return (
     <section className="p-4 border-b border-slate-200">
@@ -129,7 +128,7 @@ export function PersonEditor() {
             >
               <option value="">請選擇</option>
               {state.persons
-                .filter(p => p.id !== person.id && (p.status === '死亡' || p.status === '再轉繼承'))
+                .filter(p => p.id !== person.id && (p.status === '死亡' || p.status === '再轉繼承' || p.status === '代位繼承'))
                 .map(p => (
                   <option key={p.id} value={p.id}>{p.name || '(未命名)'}</option>
                 ))}
