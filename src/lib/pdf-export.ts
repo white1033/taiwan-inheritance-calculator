@@ -160,14 +160,16 @@ function patchClone(clonedDoc: Document, clone: HTMLElement) {
   clonedDoc.head.appendChild(styleEl);
 
   // Export-only visual cleanup to reduce Chromium shadow artifacts.
+  // Note: do NOT set `display: none` on node buttons — the button wrapper div
+  // is already invisible (opacity-0) in the web view and uses `py-1` padding
+  // that contributes to node height. Setting display:none would shrink the
+  // clone's node height vs the live DOM, causing a gap between node bottom
+  // and the edge path start (which uses live handle positions).
   const exportStyle = clonedDoc.createElement('style');
   exportStyle.textContent = `
     .react-flow__node {
       box-shadow: none !important;
       filter: none !important;
-    }
-    .react-flow__node button {
-      display: none !important;
     }
   `;
   clonedDoc.head.appendChild(exportStyle);

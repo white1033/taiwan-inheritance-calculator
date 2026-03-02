@@ -36,6 +36,7 @@ export function Header({ onTogglePanel, panelOpen, canUndo, canRedo, onUndo, onR
   }, []);
 
   const itemDisabled = hasErrors || loadingAction !== null;
+  const shareDisabled = loadingAction !== null;
 
   function handleItemClick(handler: () => void) {
     handler();
@@ -136,7 +137,7 @@ export function Header({ onTogglePanel, panelOpen, canUndo, canRedo, onUndo, onR
               </button>
               <button
                 type="button"
-                disabled={itemDisabled}
+                disabled={shareDisabled}
                 onClick={() => handleItemClick(handleShareLink)}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
