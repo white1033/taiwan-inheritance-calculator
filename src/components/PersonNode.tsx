@@ -89,7 +89,7 @@ export const PersonNode = memo(function PersonNode({
         </button>
       )}
 
-      <div className="px-3 py-2">
+      <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs text-slate-500">
             {data.isDecedent ? '被繼承人' : data.relation}
