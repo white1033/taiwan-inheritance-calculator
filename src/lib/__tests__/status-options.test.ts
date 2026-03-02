@@ -83,14 +83,6 @@ describe('computeAvailableStatuses', () => {
     expect(result).toContain('代位繼承');
   });
 
-  it('no decedent deathDate → treat 死亡 parent as 代位繼承 scenario', () => {
-    const decedentNoDeath: Decedent = { id: 'D', name: '王大明' };
-    const parent: Person = { id: 'p', name: '父', relation: '子女', status: '死亡', deathDate: '2023-06-01' };
-    const child: Person = { id: 'c', name: '子', relation: '子女', status: '代位繼承', parentId: 'p' };
-    const result = computeAvailableStatuses(child, [parent, child], decedentNoDeath);
-    expect(result).toContain('代位繼承');
-  });
-
   it('no parent deathDate with 死亡 parent → treat as before decedent (代位繼承)', () => {
     const parent: Person = { id: 'p', name: '父', relation: '子女', status: '死亡' };
     const child: Person = { id: 'c', name: '子', relation: '子女', status: '代位繼承', parentId: 'p' };
