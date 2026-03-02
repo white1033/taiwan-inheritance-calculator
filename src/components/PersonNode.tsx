@@ -55,7 +55,7 @@ export const PersonNode = memo(function PersonNode({
 
   return (
     <div
-      className={`rounded-lg shadow-md border border-slate-200 border-t-4 ${colorClass} ${ringClass} ${data.isDecedent ? 'bg-slate-50 w-60' : 'bg-white w-52'} cursor-pointer relative group`}
+      className={`rounded-lg shadow-md border border-slate-200 border-t-4 ${colorClass} ${ringClass} ${data.isDecedent ? 'bg-slate-50 w-60' : 'bg-white w-52'} cursor-pointer relative group overflow-hidden`}
       onClick={() => { if (!data.isDecedent) onSelect(id); }}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(id, !!data.isDecedent, e); }}
       tabIndex={0}
