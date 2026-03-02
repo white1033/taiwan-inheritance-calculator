@@ -94,9 +94,11 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       errors.push({ personId: p.id, field: 'relation', message: '子女之配偶必須隸屬於一位子女' });
     }
 
-    // 子女 with parentId must be 代位繼承 or 再轉繼承 (not 一般繼承/拋棄繼承)
-    if (p.relation === '子女' && p.parentId && p.status !== '代位繼承' && p.status !== '再轉繼承') {
-      errors.push({ personId: p.id, field: 'status', message: '子女有上層繼承人時，狀態須為代位繼承或再轉繼承' });
+    // 子女 with parentId must not be 一般繼承 or 拋棄繼承 (alive person cannot be a sub-heir)
+    // '死亡' is also allowed: the engine treats these as intermediate dead nodes in the
+    // 代位繼承 chain (e.g., grandchild who also died before the decedent).
+    if (p.relation === '子女' && p.parentId && (p.status === '一般繼承' || p.status === '拋棄繼承')) {
+      errors.push({ personId: p.id, field: 'status', message: '子女有上層繼承人時，狀態須為代位繼承、再轉繼承或死亡' });
     }
 
     if ((p.status === '死亡' || p.status === '死亡絕嗣') && !p.deathDate) {

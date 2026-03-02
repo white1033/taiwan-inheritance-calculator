@@ -331,27 +331,48 @@ function distributeShare(
 ): void {
   if (depth > MAX_DEPTH) return;
 
-  const subHeirs = persons.filter(
-    p => p.status === status && p.parentId === parentId
+  // Direct sub-heirs with the expected status
+  const directSubHeirs = persons.filter(
+    p => p.status === status && p.parentId === parentId && !visited.has(p.id)
   );
 
-  if (subHeirs.length === 0) return;
+  // For 代位繼承: also include '死亡' intermediate nodes that have 代位繼承 descendants.
+  // This handles states loaded from URL (or created before the fix) where an intermediate
+  // dead person has status '死亡' instead of the correct '代位繼承'.
+  const deadIntermediates = status === '代位繼承'
+    ? persons.filter(p =>
+        (p.status === '死亡' || p.status === '死亡絕嗣') &&
+        p.parentId === parentId &&
+        !visited.has(p.id) &&
+        hasLivingDescendant(p.id, persons)
+      )
+    : [];
 
-  const perHeir = divide(share, frac(subHeirs.length));
-  for (const heir of subHeirs) {
+  const allSubHeirs = [...directSubHeirs, ...deadIntermediates];
+  if (allSubHeirs.length === 0) return;
+
+  const perHeir = divide(share, frac(allSubHeirs.length));
+  for (const heir of allSubHeirs) {
     if (visited.has(heir.id)) {
       pushZeroResult(heir, results);
       continue;
     }
     visited.add(heir.id);
 
-    // Check if this sub-heir also has their own sub-heirs (next level)
-    const hasOwnSubHeirs = persons.some(
+    // Check if this sub-heir also has their own sub-heirs (next level):
+    // either direct sub-heirs with the same status, or '死亡' intermediates with
+    // living descendants (for robustness with old/URL-loaded states).
+    const hasDirectSubHeirs = persons.some(
       p => p.status === status && p.parentId === heir.id
     );
+    const hasDeadIntermediateSubHeirs = status === '代位繼承' && persons.some(
+      p => (p.status === '死亡' || p.status === '死亡絕嗣') &&
+           p.parentId === heir.id &&
+           hasLivingDescendant(p.id, persons)
+    );
 
-    if (hasOwnSubHeirs) {
-      // This heir is dead with sub-heirs — record zero and recurse
+    if (hasDirectSubHeirs || hasDeadIntermediateSubHeirs) {
+      // This heir has further sub-heirs — record zero and recurse
       pushZeroResult(heir, results);
       distributeShare(heir.id, perHeir, status, persons, results, visited, depth + 1);
     } else {

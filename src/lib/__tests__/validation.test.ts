@@ -285,6 +285,17 @@ describe('validate', () => {
     expect(hasError(errors, '2', 'status')).toBe(true);
   });
 
+  it('no status error when 子女 with 死亡 has parentId (valid intermediate in 代位繼承 chain)', () => {
+    // 張小明 died before the decedent and has a 代位繼承 child; status '死亡' + parentId is allowed
+    const persons: Person[] = [
+      { id: '1', name: '父', relation: '子女', status: '死亡', deathDate: '2023-06-01' },
+      { id: '2', name: '張小明', relation: '子女', status: '死亡', deathDate: '2020-01-01', parentId: '1' },
+      { id: '3', name: 'Z', relation: '子女', status: '代位繼承', parentId: '2' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(errors.filter(e => e.personId === '2' && e.field === 'status')).toHaveLength(0);
+  });
+
   it('errors when 再轉繼承 sub-heir has 死亡 parent who died before decedent', () => {
     // 丙 died 2023-01-01 (before decedent 2024-01-01), so C should be 代位繼承 not 再轉繼承
     const persons: Person[] = [

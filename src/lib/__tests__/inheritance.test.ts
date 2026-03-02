@@ -722,5 +722,26 @@ describe('calculateShares', () => {
       expectShare(results, '張小華', 1, 6);
       expectShare(results, 'Z', 1, 6);
     });
+
+    it('multi-level 代位繼承: intermediate with 死亡 status (old URL state) still distributes correctly', () => {
+      // Same legal scenario but 張小明 has status '死亡' instead of '代位繼承'
+      // (happens when URL state was created before the fix).
+      // Engine must handle '死亡' intermediate nodes and produce the same result.
+      const persons: Person[] = [
+        { id: 'sp', name: '配偶', relation: '配偶', status: '一般繼承' },
+        { id: 'A', name: '張大宏', relation: '子女', status: '一般繼承' },
+        { id: 'B', name: '張大偉', relation: '子女', status: '死亡', deathDate: '2023-06-01' },
+        { id: 'C', name: '張小明', relation: '子女', status: '死亡', deathDate: '2020-01-01', parentId: 'B' },
+        { id: 'D', name: '張小華', relation: '子女', status: '代位繼承', parentId: 'B' },
+        { id: 'Z', name: 'Z', relation: '子女', status: '代位繼承', parentId: 'C' },
+      ];
+      const results = calculateShares(decedent, persons);
+      expectShare(results, '配偶', 1, 3);
+      expectShare(results, '張大宏', 1, 3);
+      expectShare(results, '張大偉', 0, 1);
+      expectShare(results, '張小明', 0, 1);
+      expectShare(results, '張小華', 1, 6);
+      expectShare(results, 'Z', 1, 6);
+    });
   });
 });
