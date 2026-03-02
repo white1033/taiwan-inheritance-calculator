@@ -279,7 +279,7 @@ function drawEdgesOnCanvas(canvas: HTMLCanvasElement, element: HTMLElement, canv
     ctx.lineJoin = 'round';
 
     if (dashArray && dashArray !== 'none') {
-      const dashes = dashArray.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      const dashes = dashArray.split(/[\s,]+/).map(parseFloat).filter(n => !isNaN(n));
       if (dashes.length > 0) ctx.setLineDash(dashes);
     }
 
