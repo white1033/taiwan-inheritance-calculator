@@ -184,7 +184,12 @@ function reducer(state: CoreState, action: Action): CoreState {
         }
       }
       collectDescendants(action.payload.id);
-      const persons = state.persons.filter(p => !idsToDelete.has(p.id));
+      const remainingPersons = state.persons.filter(p => !idsToDelete.has(p.id));
+      const persons = remainingPersons.map(p =>
+        p.coParentId && idsToDelete.has(p.coParentId)
+          ? { ...p, coParentId: undefined }
+          : p
+      );
       const next = {
         ...state,
         ...history,
