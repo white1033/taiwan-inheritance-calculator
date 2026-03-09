@@ -131,8 +131,8 @@ function reducer(state: CoreState, action: Action): CoreState {
       const history = pushUndo(state);
       const parent = state.persons.find(p => p.id === action.payload.parentId);
       let status: Person['status'] = '一般繼承';
-      // 子女之配偶僅供樹狀圖顯示，不參與繼承計算，一律使用一般繼承
-      if (action.payload.relation !== '子女之配偶' && parent) {
+      // 子女之配偶僅供樹狀圖顯示，不參與繼承計算，一律使用一般繼承；配偶亦預設為一般繼承
+      if (action.payload.relation !== '子女之配偶' && action.payload.relation !== '配偶' && parent) {
         if (parent.status === '死亡' || parent.status === '死亡絕嗣') {
           // 依據死亡日期判斷代位繼承或再轉繼承
           if (parent.deathDate && state.decedent.deathDate && parent.deathDate > state.decedent.deathDate) {
