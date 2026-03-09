@@ -17,8 +17,11 @@ export function computeAvailableStatuses(
   let options: InheritanceStatus[];
 
   if (!person.parentId) {
-    // Top-level heir: neither 代位繼承 nor sub-heir 再轉繼承 applies
-    options = ['一般繼承', '死亡', '死亡絕嗣', '拋棄繼承'];
+    // Top-level heir: 代位繼承 doesn't apply, but 再轉繼承 does (when heir dies after decedent)
+    // 配偶 excluded since spouse re-transfer isn't supported in this calculator
+    options = person.relation === '配偶'
+      ? ['一般繼承', '死亡', '死亡絕嗣', '拋棄繼承']
+      : ['一般繼承', '死亡', '死亡絕嗣', '拋棄繼承', '再轉繼承'];
   } else {
     const parent = persons.find(p => p.id === person.parentId);
 

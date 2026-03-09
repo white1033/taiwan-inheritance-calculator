@@ -5,17 +5,24 @@ import type { Person, Decedent } from '../../types/models';
 const decedent: Decedent = { id: 'D', name: '王大明', deathDate: '2024-01-01' };
 
 describe('computeAvailableStatuses', () => {
-  it('top-level person: excludes 代位繼承 and 再轉繼承', () => {
+  it('top-level non-配偶 person: excludes 代位繼承, includes 再轉繼承', () => {
     const p: Person = { id: '1', name: 'A', relation: '子女', status: '一般繼承' };
     const result = computeAvailableStatuses(p, [p], decedent);
     expect(result).toContain('一般繼承');
     expect(result).toContain('死亡');
     expect(result).toContain('拋棄繼承');
+    expect(result).toContain('再轉繼承');
     expect(result).not.toContain('代位繼承');
-    expect(result).not.toContain('再轉繼承');
   });
 
-  it('top-level 配偶: same exclusions', () => {
+  it('top-level 兄弟姊妹: includes 再轉繼承', () => {
+    const p: Person = { id: '1', name: 'A', relation: '兄弟姊妹', status: '一般繼承' };
+    const result = computeAvailableStatuses(p, [p], decedent);
+    expect(result).toContain('再轉繼承');
+    expect(result).not.toContain('代位繼承');
+  });
+
+  it('top-level 配偶: excludes both 代位繼承 and 再轉繼承', () => {
     const p: Person = { id: '1', name: '配偶', relation: '配偶', status: '一般繼承' };
     const result = computeAvailableStatuses(p, [p], decedent);
     expect(result).not.toContain('代位繼承');

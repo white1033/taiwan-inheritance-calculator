@@ -168,9 +168,19 @@ export function PersonEditor() {
           <Input
             id="person-marriageDate"
             type="date"
-            value={person.marriageDate || ''}
+            value={person.marriageDate === '已婚' ? '' : (person.marriageDate || '')}
+            disabled={person.marriageDate === '已婚'}
             onChange={e => update({ marriageDate: e.target.value || undefined })}
           />
+          <label className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={person.marriageDate === '已婚'}
+              onChange={e => update({ marriageDate: e.target.checked ? '已婚' : undefined })}
+              className="rounded"
+            />
+            已婚（日期不詳）
+          </label>
         </div>
 
         <div>
@@ -183,12 +193,13 @@ export function PersonEditor() {
           />
         </div>
 
-        {person.relation === '子女' && person.status !== '死亡絕嗣' && (
+        {((person.relation === '子女' && person.status !== '死亡絕嗣') ||
+          (person.relation === '兄弟姊妹' && (person.status === '死亡' || person.status === '再轉繼承'))) && (
           <div className="border-t border-slate-200 pt-3">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               此人的親屬
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={person.relation === '子女' ? 'grid grid-cols-2 gap-2' : ''}>
               <Button
                 onClick={() => dispatch({
                   type: 'ADD_SUB_HEIR',
@@ -197,17 +208,19 @@ export function PersonEditor() {
               >
                 + 新增子女
               </Button>
-              <Button
-                onClick={() => dispatch({
-                  type: 'ADD_SUB_HEIR',
-                  payload: { parentId: person.id, relation: '子女之配偶' },
-                })}
-                disabled={state.persons.some(
-                  p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
-                )}
-              >
-                + 新增配偶
-              </Button>
+              {person.relation === '子女' && (
+                <Button
+                  onClick={() => dispatch({
+                    type: 'ADD_SUB_HEIR',
+                    payload: { parentId: person.id, relation: '子女之配偶' },
+                  })}
+                  disabled={state.persons.some(
+                    p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
+                  )}
+                >
+                  + 新增配偶
+                </Button>
+              )}
             </div>
           </div>
         )}

@@ -136,7 +136,7 @@ export const PersonNode = memo(function PersonNode({
           const dateRows: [string, string | undefined][] = [
             ['出生', data.birthDate],
             ['死亡', data.deathDate],
-            ['結婚', data.marriageDate],
+            ['結婚', data.marriageDate === '已婚' ? '已婚（不詳）' : data.marriageDate],
             ['離婚', data.divorceDate],
           ];
           const filled = dateRows.filter(([, v]) => v);
@@ -170,7 +170,10 @@ export const PersonNode = memo(function PersonNode({
         </div>
       )}
 
-      {!data.isDecedent && data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承' || data.status === '代位繼承') && (
+      {!data.isDecedent && (
+        (data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承' || data.status === '代位繼承')) ||
+        (data.relation === '兄弟姊妹' && (data.status === '死亡' || data.status === '再轉繼承'))
+      ) && (
         <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button
             type="button"
@@ -181,7 +184,7 @@ export const PersonNode = memo(function PersonNode({
           >
             +子女
           </button>
-          {(data.status === '死亡' || data.status === '再轉繼承') && !data.hasCurrentSpouse && (
+          {data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承') && !data.hasCurrentSpouse && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onAddSpouse(id); }}

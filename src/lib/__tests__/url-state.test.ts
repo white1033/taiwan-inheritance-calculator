@@ -353,4 +353,12 @@ describe('url-state', () => {
     expect(decoded!.persons[1].status).toBe('死亡');
     expect(decoded!.persons[2].status).toBe('代位繼承');
   });
+
+  it('preserves marriageDate=已婚 sentinel in round-trip', async () => {
+    const p: Person = { id: 'p1', name: '李小華', relation: '配偶', status: '一般繼承', marriageDate: '已婚' };
+    const encoded = await encodeState(decedent, [p]);
+    const decoded = await decodeState(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.persons[0].marriageDate).toBe('已婚');
+  });
 });

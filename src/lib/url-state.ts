@@ -27,10 +27,12 @@ interface CompactState {
 }
 
 function packDate(d: string): string {
+  if (d === '已婚') return 'M';
   return d.replace(/-/g, '');
 }
 
 function unpackDate(d: string): string {
+  if (d === 'M') return '已婚';
   // "20240515" → "2024-05-15"
   return d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8);
 }
