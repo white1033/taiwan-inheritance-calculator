@@ -14,6 +14,15 @@ export function computeAvailableStatuses(
     return ['再轉繼承'];
   }
 
+  // 配偶 sub-heir（parentId 存在）：只允許 一般繼承、再轉繼承、拋棄繼承
+  if (person.relation === '配偶' && person.parentId) {
+    const options: InheritanceStatus[] = ['一般繼承', '再轉繼承', '拋棄繼承'];
+    if (!options.includes(person.status)) {
+      return [person.status, ...options];
+    }
+    return options;
+  }
+
   let options: InheritanceStatus[];
 
   if (!person.parentId) {
