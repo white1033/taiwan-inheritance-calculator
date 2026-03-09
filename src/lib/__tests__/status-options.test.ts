@@ -125,4 +125,23 @@ describe('computeAvailableStatuses', () => {
     expect(result).toContain('代位繼承');
     expect(result).not.toContain('再轉繼承');
   });
+
+  it('配偶 sub-heir: returns 一般繼承/再轉繼承/拋棄繼承 only', () => {
+    const parent: Person = { id: 'p', name: '子甲', relation: '子女', status: '死亡', deathDate: '2024-06-01' };
+    const spouse: Person = { id: 's', name: '配偶乙', relation: '配偶', status: '一般繼承', parentId: 'p' };
+    const result = computeAvailableStatuses(spouse, [parent, spouse], decedent);
+    expect(result).toEqual(['一般繼承', '再轉繼承', '拋棄繼承']);
+    expect(result).not.toContain('代位繼承');
+    expect(result).not.toContain('死亡');
+  });
+
+  it('配偶 sub-heir: stale status prepended for backward compat', () => {
+    const parent: Person = { id: 'p', name: '子甲', relation: '子女', status: '死亡', deathDate: '2024-06-01' };
+    const spouse: Person = { id: 's', name: '配偶乙', relation: '配偶', status: '死亡', parentId: 'p' };
+    const result = computeAvailableStatuses(spouse, [parent, spouse], decedent);
+    expect(result[0]).toBe('死亡');
+    expect(result).toContain('一般繼承');
+    expect(result).toContain('再轉繼承');
+    expect(result).toContain('拋棄繼承');
+  });
 });
