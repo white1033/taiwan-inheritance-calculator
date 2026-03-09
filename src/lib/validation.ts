@@ -1,4 +1,4 @@
-import type { Person, Decedent } from '../types/models';
+import type { Person, Decedent, InheritanceStatus } from '../types/models';
 import { getOrder } from '../types/models';
 
 export interface ValidationError {
@@ -84,9 +84,16 @@ export function validate(persons: Person[], decedent?: Decedent): ValidationErro
       }
     }
 
-    // 根配偶不應有 parentId（配偶不屬於繼承順位，不可為代位/再轉 sub-heir）
+    // 配偶可有 parentId，但限制：parent 必須是再轉繼承狀態，且自身狀態只允許特定選項
     if (p.relation === '配偶' && p.parentId) {
-      errors.push({ personId: p.id, field: 'parentId', message: '配偶不可作為代位或再轉繼承人' });
+      const parent = personMap.get(p.parentId);
+      if (!parent || parent.status !== '再轉繼承') {
+        errors.push({ personId: p.id, field: 'parentId', message: '配偶 sub-heir 的上層必須是再轉繼承狀態' });
+      }
+      const validSpouseSubStatuses: InheritanceStatus[] = ['一般繼承', '再轉繼承', '拋棄繼承'];
+      if (!validSpouseSubStatuses.includes(p.status)) {
+        errors.push({ personId: p.id, field: 'status', message: '再轉繼承人的配偶狀態只允許一般繼承、再轉繼承或拋棄繼承' });
+      }
     }
 
     // 子女之配偶必須有 parentId（僅作為子女的附屬顯示角色）

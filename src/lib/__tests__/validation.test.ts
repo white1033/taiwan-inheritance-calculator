@@ -337,4 +337,32 @@ describe('validate', () => {
     const errors = validate(persons, decedent);
     expect(errors.filter(e => e.personId === 'S' && e.field === 'status' && e.message.includes('代位繼承'))).toHaveLength(0);
   });
+
+  it('allows 配偶 sub-heir when parent is 再轉繼承', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: '配偶乙', relation: '配偶', status: '一般繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(false);
+    expect(hasError(errors, '2', 'status')).toBe(false);
+  });
+
+  it('errors when 配偶 sub-heir parent is not 再轉繼承', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '配偶乙', relation: '配偶', status: '一般繼承', parentId: '1' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'parentId')).toBe(true);
+  });
+
+  it('errors when 配偶 sub-heir has invalid status (死亡絕嗣)', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: '配偶乙', relation: '配偶', status: '死亡絕嗣', parentId: '1', deathDate: '2024-06-01' },
+    ];
+    const errors = validate(persons, decedent);
+    expect(hasError(errors, '2', 'status')).toBe(true);
+  });
 });
