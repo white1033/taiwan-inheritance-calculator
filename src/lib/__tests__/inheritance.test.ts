@@ -745,3 +745,61 @@ describe('calculateShares', () => {
     });
   });
 });
+
+describe('配偶作為再轉繼承 sub-heir', () => {
+  it('再轉繼承人有在世配偶：份額三等分', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: 'A', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '3', name: 'B', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '4', name: '配偶乙', relation: '配偶', status: '一般繼承', parentId: '1' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '甲', 0, 1);
+    expectShare(results, 'A', 1, 3);
+    expectShare(results, 'B', 1, 3);
+    expectShare(results, '配偶乙', 1, 3);
+  });
+
+  it('再轉繼承人的配偶也死亡：配偶份額再轉給其子女', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: 'A', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '3', name: 'B', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '4', name: '配偶乙', relation: '配偶', status: '再轉繼承', parentId: '1', deathDate: '2024-06-01' },
+      { id: '5', name: 'C', relation: '子女', status: '再轉繼承', parentId: '4' },
+      { id: '6', name: 'D', relation: '子女', status: '再轉繼承', parentId: '4' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '甲', 0, 1);
+    expectShare(results, 'A', 1, 3);
+    expectShare(results, 'B', 1, 3);
+    expectShare(results, '配偶乙', 0, 1);
+    expectShare(results, 'C', 1, 6);
+    expectShare(results, 'D', 1, 6);
+  });
+
+  it('配偶 sub-heir 拋棄繼承：份額由其他子女均分', () => {
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: 'A', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '3', name: 'B', relation: '子女', status: '再轉繼承', parentId: '1' },
+      { id: '4', name: '配偶乙', relation: '配偶', status: '拋棄繼承', parentId: '1' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '配偶乙', 0, 1);
+    expectShare(results, 'A', 1, 2);
+    expectShare(results, 'B', 1, 2);
+  });
+
+  it('兄弟姊妹再轉繼承，僅有在世配偶：配偶取得全部份額', () => {
+    // 被繼承人無子女、父母，只有兄弟姊妹丙（再轉繼承）
+    const persons: Person[] = [
+      { id: '1', name: '丙', relation: '兄弟姊妹', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: '配偶丁', relation: '配偶', status: '一般繼承', parentId: '1' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '丙', 0, 1);
+    expectShare(results, '配偶丁', 1, 1);
+  });
+});

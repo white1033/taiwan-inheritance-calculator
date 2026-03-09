@@ -105,7 +105,11 @@ function determineActiveOrder(persons: Person[]): number | null {
         return hasLivingDescendant(p.id, persons);
       }
       if (p.status === '再轉繼承' && !p.parentId) {
-        return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
+        return persons.some(sub =>
+          sub.parentId === p.id &&
+          (sub.status === '再轉繼承' ||
+           (sub.relation === '配偶' && sub.status === '一般繼承'))
+        );
       }
       return true;
     });
@@ -150,8 +154,8 @@ export function calculateShares(decedent: Decedent, persons: Person[]): Calculat
   void decedent; // reserved for future use (e.g., deathDate-based logic)
   if (persons.length === 0) return [];
 
-  // Find the spouse (if any)
-  const spouse = persons.find(p => p.relation === '配偶' && p.status === '一般繼承' && !p.divorceDate);
+  // Find the spouse (if any) — exclude 配偶 sub-heirs (those with parentId)
+  const spouse = persons.find(p => p.relation === '配偶' && p.status === '一般繼承' && !p.divorceDate && !p.parentId);
 
   // Determine the active inheritance order
   const activeOrder = determineActiveOrder(persons);
@@ -176,7 +180,11 @@ export function calculateShares(decedent: Decedent, persons: Person[]): Calculat
           return hasLivingDescendant(p.id, persons);
         }
         if (p.status === '再轉繼承' && !p.parentId) {
-          return persons.some(sub => sub.status === '再轉繼承' && sub.parentId === p.id);
+          return persons.some(sub =>
+          sub.parentId === p.id &&
+          (sub.status === '再轉繼承' ||
+           (sub.relation === '配偶' && sub.status === '一般繼承'))
+        );
         }
         return true;
       })
@@ -336,6 +344,16 @@ function distributeShare(
     p => p.status === status && p.parentId === parentId && !visited.has(p.id)
   );
 
+  // 再轉繼承時，也納入在世的配偶 sub-heir（status 一般繼承，非拋棄繼承）
+  const livingSpouseSubHeirs = status === '再轉繼承'
+    ? persons.filter(
+        p => p.relation === '配偶' &&
+             p.parentId === parentId &&
+             p.status === '一般繼承' &&
+             !visited.has(p.id)
+      )
+    : [];
+
   // For 代位繼承: also include '死亡' intermediate nodes that have 代位繼承 descendants.
   // This handles states loaded from URL (or created before the fix) where an intermediate
   // dead person has status '死亡' instead of the correct '代位繼承'.
@@ -348,7 +366,7 @@ function distributeShare(
       )
     : [];
 
-  const allSubHeirs = [...directSubHeirs, ...deadIntermediates];
+  const allSubHeirs = [...directSubHeirs, ...livingSpouseSubHeirs, ...deadIntermediates];
   if (allSubHeirs.length === 0) return;
 
   const perHeir = divide(share, frac(allSubHeirs.length));
