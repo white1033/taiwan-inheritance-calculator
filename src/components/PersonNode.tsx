@@ -171,8 +171,10 @@ export const PersonNode = memo(function PersonNode({
       )}
 
       {!data.isDecedent && (
-        (data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承' || data.status === '代位繼承')) ||
-        (data.relation === '兄弟姊妹' && (data.status === '死亡' || data.status === '再轉繼承'))
+        data.status === '再轉繼承' ||
+        (data.relation === '子女' && data.status === '死亡') ||
+        (data.relation === '子女' && data.status === '代位繼承') ||
+        (data.relation === '兄弟姊妹' && data.status === '死亡')
       ) && (
         <div className="flex justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <button
@@ -184,7 +186,7 @@ export const PersonNode = memo(function PersonNode({
           >
             +子女
           </button>
-          {data.relation === '子女' && (data.status === '死亡' || data.status === '再轉繼承') && !data.hasCurrentSpouse && (
+          {data.status === '再轉繼承' && data.relation !== '配偶' && !data.hasCurrentSpouse && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onAddSpouse(id); }}
