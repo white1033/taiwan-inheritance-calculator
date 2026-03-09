@@ -87,8 +87,23 @@ export function buildTreeLayout(
     const childPersons = persons.filter(
       (p) => p.parentId === personId && p.relation !== '子女之配偶' && p.relation !== '配偶',
     );
-    const spouseCount = getSpouseNodes(personId).length;
-    const selfWidth = spouseCount > 0 ? NODE_WIDTH + spouseCount * (NODE_WIDTH + H_GAP) : NODE_WIDTH;
+    const spouseNodes = getSpouseNodes(personId);
+    const spouseCount = spouseNodes.length;
+    // Extra width for children of 配偶 sub-heirs
+    const spouseChildExtraWidth = spouseNodes
+      .filter(sp => sp.relation === '配偶' && sp.parentId)
+      .reduce((extra, sp) => {
+        const spChildPersons = persons.filter(
+          p => p.parentId === sp.id && p.relation !== '子女之配偶' && p.relation !== '配偶'
+        );
+        if (spChildPersons.length === 0) return extra;
+        const spChildrenWidth = spChildPersons.reduce((sum, c) => sum + subtreeWidth(c.id, depth + 1), 0)
+          + (spChildPersons.length - 1) * H_GAP;
+        return extra + Math.max(0, spChildrenWidth - NODE_WIDTH);
+      }, 0);
+    const selfWidth = spouseCount > 0
+      ? NODE_WIDTH + spouseCount * (NODE_WIDTH + H_GAP) + spouseChildExtraWidth
+      : NODE_WIDTH;
     if (childPersons.length === 0) {
       widthCache.set(personId, selfWidth);
       return selfWidth;

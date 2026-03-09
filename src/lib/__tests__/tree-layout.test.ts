@@ -330,4 +330,50 @@ describe('tree-layout', () => {
     // siblingStartX = 224 + 40 = 264 (spouse is on the left, doesn't affect right)
     expect(b1?.position.x).toBe(264);
   });
+
+  test('配偶 sub-heir (再轉繼承 spouse): placed left of child, recursive subtree', () => {
+    // C (child, 再轉繼承) has CS (配偶 sub-heir) who in turn has GC (grandchild)
+    const persons = [
+      makePerson('C', '子女', '再轉繼承'),
+      makePerson('CS', '配偶', '再轉繼承', 'C'),
+      makePerson('GC', '子女', '再轉繼承', 'CS'),
+    ];
+    const result = layout(persons);
+
+    const cNode = findNode(result, 'C');
+    const csNode = findNode(result, 'CS');
+    const gcNode = findNode(result, 'GC');
+
+    // CS should be on the same row as C
+    expect(csNode?.position.y).toBe(cNode?.position.y);
+    // CS should be to the left of C
+    expect((csNode?.position.x ?? 0)).toBeLessThan(cNode?.position.x ?? 0);
+
+    // GC should appear below CS
+    expect(gcNode?.position.y).toBeGreaterThan(csNode?.position.y ?? 0);
+
+    // Edge C→CS exists (spouse edge)
+    expect(findEdge(result, 'C', 'CS')).toBeDefined();
+    // Edge CS→GC exists (from layoutSubtree recursion)
+    expect(findEdge(result, 'CS', 'GC')).toBeDefined();
+  });
+
+  test('coParentId: thin dashed edge from coParent to child', () => {
+    // C is a dead child (再轉繼承 parent). GC is a sub-heir of C, whose coParentId
+    // points to CS (C's spouse/sub-heir). This triggers the coParentId edge inside layoutSubtree.
+    const persons = [
+      makePerson('C', '子女', '死亡'),
+      makePerson('CS', '子女之配偶', '一般繼承', 'C'),
+      { ...makePerson('GC', '子女', '代位繼承', 'C'), coParentId: 'CS' },
+    ];
+    const result = layout(persons);
+
+    const coEdge = findEdge(result, 'CS', 'GC');
+    expect(coEdge).toBeDefined();
+    expect(coEdge?.type).toBe('straight');
+    expect(coEdge?.style?.strokeWidth).toBe(1);
+    expect(coEdge?.style?.strokeDasharray).toBe('3,3');
+    expect(coEdge?.style?.stroke).toBe('#cbd5e1');
+    expect(coEdge?.zIndex).toBe(-1);
+  });
 });
