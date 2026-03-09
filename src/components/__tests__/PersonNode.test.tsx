@@ -117,6 +117,14 @@ describe('PersonNode', () => {
     expect(screen.queryByText(/離婚/)).not.toBeInTheDocument();
   });
 
+  it('displays 已婚（不詳） when marriageDate is sentinel 已婚', () => {
+    renderNode({ marriageDate: '已婚' });
+    expect(screen.getByText(/結婚/)).toBeInTheDocument();
+    expect(screen.getByText(/已婚（不詳）/)).toBeInTheDocument();
+    // Should not show the raw sentinel string
+    expect(screen.queryByText(/：已婚$/)).not.toBeInTheDocument();
+  });
+
   it('always shows death date for decedent', () => {
     renderNode({ isDecedent: true, deathDate: undefined });
     expect(screen.getByText(/死亡/)).toBeInTheDocument();

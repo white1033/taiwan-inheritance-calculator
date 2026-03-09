@@ -61,4 +61,43 @@ describe('PersonEditor', () => {
     // Editor should close
     expect(screen.queryByText('編輯繼承人')).not.toBeInTheDocument();
   });
+
+  it('shows 已婚（日期不詳）checkbox in PersonEditor', async () => {
+    const user = userEvent.setup();
+    renderWithAddedPerson();
+
+    await user.click(screen.getByRole('button', { name: '+ 子女' }));
+
+    expect(screen.getByLabelText('已婚（日期不詳）')).toBeInTheDocument();
+  });
+
+  it('checking 已婚 checkbox disables the marriage date input', async () => {
+    const user = userEvent.setup();
+    renderWithAddedPerson();
+
+    await user.click(screen.getByRole('button', { name: '+ 子女' }));
+
+    const dateInput = document.getElementById('person-marriageDate') as HTMLInputElement;
+    const checkbox = screen.getByLabelText('已婚（日期不詳）') as HTMLInputElement;
+
+    expect(dateInput.disabled).toBe(false);
+    await user.click(checkbox);
+    expect(dateInput.disabled).toBe(true);
+  });
+
+  it('unchecking 已婚 checkbox re-enables the marriage date input', async () => {
+    const user = userEvent.setup();
+    renderWithAddedPerson();
+
+    await user.click(screen.getByRole('button', { name: '+ 子女' }));
+
+    const dateInput = document.getElementById('person-marriageDate') as HTMLInputElement;
+    const checkbox = screen.getByLabelText('已婚（日期不詳）') as HTMLInputElement;
+
+    await user.click(checkbox);
+    expect(dateInput.disabled).toBe(true);
+
+    await user.click(checkbox);
+    expect(dateInput.disabled).toBe(false);
+  });
 });
