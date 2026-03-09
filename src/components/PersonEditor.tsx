@@ -193,13 +193,39 @@ export function PersonEditor() {
           />
         </div>
 
-        {((person.relation === '子女' && person.status !== '死亡絕嗣') ||
-          (person.relation === '兄弟姊妹' && (person.status === '死亡' || person.status === '再轉繼承'))) && (
+        {(() => {
+          const parent = person.parentId ? state.persons.find(p => p.id === person.parentId) : null;
+          if (!parent || parent.status !== '再轉繼承') return null;
+          if (person.relation === '配偶') return null;
+          // 同層的配偶 sub-heirs
+          const siblingSpouses = state.persons.filter(
+            p => p.parentId === person.parentId && p.relation === '配偶'
+          );
+          if (siblingSpouses.length === 0) return null;
+          return (
+            <div>
+              <label className="block text-sm text-slate-600 mb-1">生親配偶（選填）</label>
+              <Select
+                value={person.coParentId ?? ''}
+                onChange={e => update({ coParentId: e.target.value || undefined })}
+              >
+                <option value="">（不指定）</option>
+                {siblingSpouses.map(sp => (
+                  <option key={sp.id} value={sp.id}>{sp.name || '(未命名配偶)'}</option>
+                ))}
+              </Select>
+            </div>
+          );
+        })()}
+
+        {(person.status === '再轉繼承' ||
+          (person.relation === '子女' && person.status === '死亡') ||
+          (person.relation === '兄弟姊妹' && person.status === '死亡')) && (
           <div className="border-t border-slate-200 pt-3">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               此人的親屬
             </h3>
-            <div className={person.relation === '子女' ? 'grid grid-cols-2 gap-2' : ''}>
+            <div className={person.status === '再轉繼承' ? 'grid grid-cols-2 gap-2' : ''}>
               <Button
                 onClick={() => dispatch({
                   type: 'ADD_SUB_HEIR',
@@ -208,14 +234,14 @@ export function PersonEditor() {
               >
                 + 新增子女
               </Button>
-              {person.relation === '子女' && (
+              {person.status === '再轉繼承' && (
                 <Button
                   onClick={() => dispatch({
                     type: 'ADD_SUB_HEIR',
-                    payload: { parentId: person.id, relation: '子女之配偶' },
+                    payload: { parentId: person.id, relation: '配偶' },
                   })}
                   disabled={state.persons.some(
-                    p => p.parentId === person.id && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
+                    p => p.parentId === person.id && p.relation === '配偶' && p.status !== '拋棄繼承'
                   )}
                 >
                   + 新增配偶
