@@ -16,8 +16,8 @@ const STATUSES: InheritanceStatus[] = [
   '一般繼承', '死亡', '死亡絕嗣', '拋棄繼承', '代位繼承', '再轉繼承',
 ];
 
-// Compact person: [name, relation, status, birthDate?, deathDate?, marriageDate?, divorceDate?, parentIndex?]
-// parentIndex is the index into the persons array (-1 or omitted = no parent)
+// Compact person: [name, relation, status, birthDate?, deathDate?, marriageDate?, divorceDate?, parentIndex?, coParentIndex?]
+// parentIndex/coParentIndex is the index into the persons array (-1 or omitted = no parent)
 // Dates stored as "YYYYMMDD" (no dashes)
 type CompactPerson = [string, number, number, ...Array<string | number>];
 
@@ -61,9 +61,10 @@ function toCompact(state: ShareState): CompactState {
       const m = p.marriageDate ? packDate(p.marriageDate) : '';
       const v = p.divorceDate ? packDate(p.divorceDate) : '';
       const pi = p.parentId != null ? idToIdx.get(p.parentId) ?? -1 : -1;
+      const ci = p.coParentId != null ? idToIdx.get(p.coParentId) ?? -1 : -1;
 
       // Trim trailing empty/default values
-      const tail: Array<string | number> = [b, x, m, v, pi];
+      const tail: Array<string | number> = [b, x, m, v, pi, ci];
       while (tail.length > 0 && (tail[tail.length - 1] === '' || tail[tail.length - 1] === -1)) {
         tail.pop();
       }
@@ -98,11 +99,13 @@ function fromCompact(compact: CompactState): ShareState {
     const m = c[5] as string | undefined;
     const v = c[6] as string | undefined;
     const pi = c[7] as number | undefined;
+    const ci = c[8] as number | undefined;
     if (b) p.birthDate = unpackDate(b);
     if (x) p.deathDate = unpackDate(x);
     if (m) p.marriageDate = unpackDate(m);
     if (v) p.divorceDate = unpackDate(v);
     if (pi != null && pi >= 0 && pi < ids.length) p.parentId = ids[pi];
+    if (ci != null && ci >= 0 && ci < ids.length) p.coParentId = ids[ci];
     return p;
   });
 

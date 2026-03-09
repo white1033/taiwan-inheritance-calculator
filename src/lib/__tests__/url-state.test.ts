@@ -361,4 +361,19 @@ describe('url-state', () => {
     expect(decoded).not.toBeNull();
     expect(decoded!.persons[0].marriageDate).toBe('已婚');
   });
+
+  it('preserves coParentId in round-trip', async () => {
+    const personsWithCoParent: Person[] = [
+      { id: 'p1', name: '李小華', relation: '配偶', status: '一般繼承' },
+      { id: 'p2', name: '王一郎', relation: '子女', status: '一般繼承', coParentId: 'p1' },
+    ];
+    const encoded = await encodeState(decedent, personsWithCoParent);
+    const decoded = await decodeState(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.persons).toHaveLength(2);
+    // coParentId of p2 should resolve to the decoded id of p1
+    expect(decoded!.persons[1].coParentId).toBe(decoded!.persons[0].id);
+    // p1 has no coParentId
+    expect(decoded!.persons[0].coParentId).toBeUndefined();
+  });
 });
