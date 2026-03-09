@@ -381,7 +381,9 @@ function distributeShare(
     // either direct sub-heirs with the same status, or '死亡' intermediates with
     // living descendants (for robustness with old/URL-loaded states).
     const hasDirectSubHeirs = persons.some(
-      p => p.status === status && p.parentId === heir.id
+      p => p.parentId === heir.id &&
+           (p.status === status ||
+            (status === '再轉繼承' && p.relation === '配偶' && p.status === '一般繼承'))
     );
     const hasDeadIntermediateSubHeirs = status === '代位繼承' && persons.some(
       p => (p.status === '死亡' || p.status === '死亡絕嗣') &&

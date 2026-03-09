@@ -802,4 +802,17 @@ describe('配偶作為再轉繼承 sub-heir', () => {
     expectShare(results, '丙', 0, 1);
     expectShare(results, '配偶丁', 1, 1);
   });
+
+  it('兩層再轉繼承：中間層唯一 sub-heir 為在世配偶', () => {
+    // 甲(再轉) → 乙(再轉) → 乙的配偶丙(一般繼承)
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: '乙', relation: '子女', status: '再轉繼承', parentId: '1', deathDate: '2024-02-01' },
+      { id: '3', name: '丙', relation: '配偶', status: '一般繼承', parentId: '2' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '甲', 0, 1);
+    expectShare(results, '乙', 0, 1);
+    expectShare(results, '丙', 1, 1);
+  });
 });
