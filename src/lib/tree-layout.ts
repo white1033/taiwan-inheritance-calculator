@@ -38,7 +38,10 @@ export function buildTreeLayout(
 
   function hasCurrentSpouse(personId: string): boolean {
     return persons.some(
-      (p) => p.parentId === personId && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡',
+      (p) => p.parentId === personId &&
+             (p.relation === '子女之配偶' || p.relation === '配偶') &&
+             !p.divorceDate &&
+             p.status !== '拋棄繼承',
     );
   }
 
@@ -69,7 +72,7 @@ export function buildTreeLayout(
 
   function getSpouseNodes(personId: string): Person[] {
     return persons.filter(
-      (p) => p.parentId === personId && p.relation === '子女之配偶',
+      (p) => p.parentId === personId && (p.relation === '子女之配偶' || p.relation === '配偶'),
     );
   }
 
@@ -82,7 +85,7 @@ export function buildTreeLayout(
     if (cached !== undefined) return cached;
 
     const childPersons = persons.filter(
-      (p) => p.parentId === personId && p.relation !== '子女之配偶',
+      (p) => p.parentId === personId && p.relation !== '子女之配偶' && p.relation !== '配偶',
     );
     const spouseCount = getSpouseNodes(personId).length;
     const selfWidth = spouseCount > 0 ? NODE_WIDTH + spouseCount * (NODE_WIDTH + H_GAP) : NODE_WIDTH;
@@ -133,11 +136,15 @@ export function buildTreeLayout(
           ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '5,5' }
           : { stroke: '#94a3b8', strokeWidth: 2 },
       });
+      // 新增：若配偶 sub-heir 有自己的子女，遞迴展開其子樹
+      if (sp.relation === '配偶' && sp.parentId) {
+        layoutSubtree(sp.id, spX + NODE_WIDTH / 2, y, depth + 1);
+      }
     });
 
     // Find children of this person (exclude spouses)
     const childPersons = persons.filter(
-      (p) => p.parentId === personId && p.relation !== '子女之配偶',
+      (p) => p.parentId === personId && p.relation !== '子女之配偶' && p.relation !== '配偶',
     );
     if (childPersons.length === 0) return;
 
@@ -170,6 +177,20 @@ export function buildTreeLayout(
       // Recurse
       layoutSubtree(child.id, childCx, childY, depth + 1);
       currentX += w + H_GAP;
+    }
+
+    // coParentId 細虛線：從配偶節點連到其共同生親子女
+    for (const child of childPersons) {
+      if (child.coParentId) {
+        edges.push({
+          id: `e-coparent-${child.coParentId}-${child.id}`,
+          source: child.coParentId,
+          target: child.id,
+          type: 'straight',
+          style: { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3,3' },
+          zIndex: -1,
+        });
+      }
     }
   }
 
