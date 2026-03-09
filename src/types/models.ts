@@ -52,6 +52,7 @@ export interface Person {
   marriageDate?: string;
   divorceDate?: string;
   parentId?: string;
+  coParentId?: string; // 視覺用：指向配偶節點 id，表示共同生親關係（不影響計算）
   inheritanceShare?: Fraction;
   reservedShare?: Fraction;
 }
