@@ -348,9 +348,15 @@ export function buildTreeLayout(
   const decedentRightEdge = -(DECEDENT_NODE_WIDTH - NODE_WIDTH) / 2 + DECEDENT_NODE_WIDTH;
   const siblingStartX = decedentRightEdge + H_GAP;
   const siblingEdgeParent = fatherNode || motherNode;
-  siblingPersons.forEach((sib, i) => {
-    const x = siblingStartX + i * (NODE_WIDTH + H_GAP);
-    addPersonNode(sib, x, 0);
+  const siblingY = 0;
+  let currentSibX = siblingStartX;
+
+  siblingPersons.forEach((sib) => {
+    const w = subtreeWidth(sib.id);
+    const cx = currentSibX + w / 2;
+    const sibSpouseCount = getSpouseNodes(sib.id).length;
+    const sibOffset = sibSpouseCount > 0 ? sibSpouseCount * (NODE_WIDTH + H_GAP) / 2 : 0;
+    addPersonNode(sib, cx + sibOffset - NODE_WIDTH / 2, siblingY);
     if (siblingEdgeParent) {
       // With parents: connect from parent node (proper family tree)
       edges.push({
@@ -373,6 +379,9 @@ export function buildTreeLayout(
         style: { stroke: '#94a3b8', strokeWidth: 2 },
       });
     }
+    // Recurse into sub-heirs (e.g. 再轉繼承 children of this sibling)
+    layoutSubtree(sib.id, cx, siblingY);
+    currentSibX += w + H_GAP;
   });
 
 
