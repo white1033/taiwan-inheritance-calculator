@@ -91,7 +91,7 @@ export function FamilyTree() {
 
   const onAddSpouse = useCallback(
     (parentId: string) => {
-      dispatch({ type: 'ADD_SUB_HEIR', payload: { parentId, relation: '子女之配偶' } });
+      dispatch({ type: 'ADD_SUB_HEIR', payload: { parentId, relation: '配偶' } });
     },
     [dispatch],
   );
@@ -125,7 +125,7 @@ export function FamilyTree() {
 
   const hasCurrentSpouseForContextPerson = contextMenu
     ? state.persons.some(
-        p => p.parentId === contextMenu.personId && p.relation === '子女之配偶' && !p.divorceDate && p.status !== '死亡'
+        p => p.parentId === contextMenu.personId && p.relation === '配偶' && p.status !== '拋棄繼承'
       )
     : false;
 
