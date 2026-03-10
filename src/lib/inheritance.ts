@@ -108,7 +108,7 @@ function determineActiveOrder(persons: Person[]): number | null {
         return persons.some(sub =>
           sub.parentId === p.id &&
           (sub.status === '再轉繼承' ||
-           (sub.relation === '配偶' && sub.status === '一般繼承'))
+           (sub.relation === '配偶' && sub.status === '一般繼承' && !sub.divorceDate))
         );
       }
       return true;
@@ -183,7 +183,7 @@ export function calculateShares(decedent: Decedent, persons: Person[]): Calculat
           return persons.some(sub =>
           sub.parentId === p.id &&
           (sub.status === '再轉繼承' ||
-           (sub.relation === '配偶' && sub.status === '一般繼承'))
+           (sub.relation === '配偶' && sub.status === '一般繼承' && !sub.divorceDate))
         );
         }
         return true;
@@ -344,12 +344,13 @@ function distributeShare(
     p => p.status === status && p.parentId === parentId && !visited.has(p.id)
   );
 
-  // 再轉繼承時，也納入在世的配偶 sub-heir（status 一般繼承，非拋棄繼承）
+  // 再轉繼承時，也納入在世的配偶 sub-heir（status 一般繼承、未離婚）
   const livingSpouseSubHeirs = status === '再轉繼承'
     ? persons.filter(
         p => p.relation === '配偶' &&
              p.parentId === parentId &&
              p.status === '一般繼承' &&
+             !p.divorceDate &&
              !visited.has(p.id)
       )
     : [];
@@ -383,7 +384,7 @@ function distributeShare(
     const hasDirectSubHeirs = persons.some(
       p => p.parentId === heir.id &&
            (p.status === status ||
-            (status === '再轉繼承' && p.relation === '配偶' && p.status === '一般繼承'))
+            (status === '再轉繼承' && p.relation === '配偶' && p.status === '一般繼承' && !p.divorceDate))
     );
     const hasDeadIntermediateSubHeirs = status === '代位繼承' && persons.some(
       p => (p.status === '死亡' || p.status === '死亡絕嗣') &&

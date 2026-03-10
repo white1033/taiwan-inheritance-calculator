@@ -815,4 +815,28 @@ describe('配偶作為再轉繼承 sub-heir', () => {
     expectShare(results, '乙', 0, 1);
     expectShare(results, '丙', 1, 1);
   });
+
+  it('再轉繼承人的離婚配偶 sub-heir 不得繼承，子女照常均分', () => {
+    // 李璧秀(再轉) 有前配偶（已離婚，divorceDate）+ 4 子女（再轉）
+    // 前配偶應得 0；4 子女各得 1/4 of 李璧秀的份額
+    // 假設被繼承人有2子：長子(一般)＋李璧秀(再轉) → 各 1/2
+    // 李璧秀的 1/2 由 4 子女均分 → 各 1/8；前配偶為 0
+    const persons: Person[] = [
+      { id: '1', name: '長子', relation: '子女', status: '一般繼承' },
+      { id: '2', name: '李璧秀', relation: '子女', status: '再轉繼承', deathDate: '2022-10-11' },
+      { id: '3', name: '前配偶', relation: '配偶', status: '一般繼承', parentId: '2', divorceDate: '2000-01-01' },
+      { id: '4', name: '王少林', relation: '子女', status: '再轉繼承', parentId: '2' },
+      { id: '5', name: '王偉丞', relation: '子女', status: '再轉繼承', parentId: '2' },
+      { id: '6', name: '王芷晴', relation: '子女', status: '再轉繼承', parentId: '2' },
+      { id: '7', name: '王秋萍', relation: '子女', status: '再轉繼承', parentId: '2' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '長子', 1, 2);
+    expectShare(results, '李璧秀', 0, 1);
+    expectShare(results, '前配偶', 0, 1);
+    expectShare(results, '王少林', 1, 8);
+    expectShare(results, '王偉丞', 1, 8);
+    expectShare(results, '王芷晴', 1, 8);
+    expectShare(results, '王秋萍', 1, 8);
+  });
 });
