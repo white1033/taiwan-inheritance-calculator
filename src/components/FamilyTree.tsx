@@ -128,7 +128,8 @@ export function FamilyTree() {
         p => p.parentId === contextMenu.personId &&
              (p.relation === '配偶' || p.relation === '子女之配偶') &&
              !p.divorceDate &&
-             p.status !== '拋棄繼承'
+             p.status !== '拋棄繼承' &&
+             p.status !== '死亡'
       )
     : false;
 

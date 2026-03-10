@@ -358,6 +358,38 @@ describe('tree-layout', () => {
     expect(findEdge(result, 'CS', 'GC')).toBeDefined();
   });
 
+  describe('hasCurrentSpouse node data flag', () => {
+    test('再轉繼承 child with living spouse: hasCurrentSpouse = true', () => {
+      const persons = [
+        makePerson('C', '子女', '再轉繼承'),
+        makePerson('CS', '子女之配偶', '一般繼承', 'C'),
+      ];
+      const { nodes } = layout(persons);
+      const c = findNode({ nodes, edges: [] }, 'C');
+      expect(c?.data.hasCurrentSpouse).toBe(true);
+    });
+
+    test('再轉繼承 child with dead spouse (status=死亡): hasCurrentSpouse = false (allows adding new spouse)', () => {
+      const persons = [
+        makePerson('C', '子女', '再轉繼承'),
+        makePerson('CS', '子女之配偶', '死亡', 'C'),
+      ];
+      const { nodes } = layout(persons);
+      const c = findNode({ nodes, edges: [] }, 'C');
+      expect(c?.data.hasCurrentSpouse).toBe(false);
+    });
+
+    test('再轉繼承 child with divorced spouse: hasCurrentSpouse = false', () => {
+      const persons: Person[] = [
+        makePerson('C', '子女', '再轉繼承'),
+        { ...makePerson('CS', '子女之配偶', '一般繼承', 'C'), divorceDate: '2020-01-01' },
+      ];
+      const { nodes } = layout(persons);
+      const c = findNode({ nodes, edges: [] }, 'C');
+      expect(c?.data.hasCurrentSpouse).toBe(false);
+    });
+  });
+
   test('coParentId: thin dashed edge from coParent to child', () => {
     // C is a dead child (再轉繼承 parent). GC is a sub-heir of C, whose coParentId
     // points to CS (C's spouse/sub-heir). This triggers the coParentId edge inside layoutSubtree.

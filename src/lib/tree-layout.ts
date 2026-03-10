@@ -41,7 +41,8 @@ export function buildTreeLayout(
       (p) => p.parentId === personId &&
              (p.relation === '子女之配偶' || p.relation === '配偶') &&
              !p.divorceDate &&
-             p.status !== '拋棄繼承',
+             p.status !== '拋棄繼承' &&
+             p.status !== '死亡',
     );
   }
 
