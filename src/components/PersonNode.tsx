@@ -186,7 +186,7 @@ export const PersonNode = memo(function PersonNode({
           >
             +子女
           </button>
-          {data.status === '再轉繼承' && data.relation !== '配偶' && !data.hasCurrentSpouse && (
+          {data.status === '再轉繼承' && !data.hasCurrentSpouse && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onAddSpouse(id); }}
