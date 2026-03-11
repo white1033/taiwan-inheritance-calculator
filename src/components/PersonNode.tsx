@@ -171,7 +171,7 @@ export const PersonNode = memo(function PersonNode({
       )}
 
       {!data.isDecedent && (
-        data.status === '再轉繼承' ||
+        (data.status === '再轉繼承' && data.relation !== '配偶') ||
         (data.relation === '子女' && data.status === '死亡') ||
         (data.relation === '子女' && data.status === '代位繼承') ||
         (data.relation === '兄弟姊妹' && data.status === '死亡')

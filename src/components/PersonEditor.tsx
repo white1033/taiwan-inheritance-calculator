@@ -195,11 +195,16 @@ export function PersonEditor() {
 
         {(() => {
           const parent = person.parentId ? state.persons.find(p => p.id === person.parentId) : null;
-          if (!parent || parent.status !== '再轉繼承') return null;
-          if (person.relation === '配偶') return null;
-          // 同層的配偶 sub-heirs
+          if (!parent) return null;
+          if (person.relation === '配偶' || person.relation === '子女之配偶') return null;
+          // 再轉繼承：找同層配偶；代位繼承（死亡子女之子）：找同層子女之配偶
+          const siblingSpouseRelation =
+            parent.status === '再轉繼承' ? '配偶' :
+            (parent.status === '死亡' && parent.relation === '子女') ? '子女之配偶' :
+            null;
+          if (!siblingSpouseRelation) return null;
           const siblingSpouses = state.persons.filter(
-            p => p.parentId === person.parentId && p.relation === '配偶'
+            p => p.parentId === person.parentId && p.relation === siblingSpouseRelation
           );
           if (siblingSpouses.length === 0) return null;
           return (
@@ -218,7 +223,7 @@ export function PersonEditor() {
           );
         })()}
 
-        {(person.status === '再轉繼承' ||
+        {((person.status === '再轉繼承' && person.relation !== '配偶') ||
           (person.relation === '子女' && person.status === '死亡') ||
           (person.relation === '兄弟姊妹' && person.status === '死亡')) && (
           <div className="border-t border-slate-200 pt-3">
