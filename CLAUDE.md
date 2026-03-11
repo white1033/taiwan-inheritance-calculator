@@ -44,8 +44,17 @@ Custom layout algorithm for ReactFlow nodes. Decedent at center, spouse offset l
 ### Key Data Types (`src/types/models.ts`)
 
 - `Person.parentId` — links sub-heirs (代位/再轉) to their dead parent heir
+- `Person.coParentId` — display-only: points to a spouse node (配偶/子女之配偶) to draw a thin dashed co-parent edge; does not affect calculation
 - `Person.status` — discriminates inheritance type: `一般繼承`, `死亡`, `拋棄繼承`, `代位繼承`, `再轉繼承`, `死亡絕嗣`
 - `Person.relation` — one of: `配偶`, `子女`, `子女之配偶`, `父`, `母`, `兄弟姊妹`, `祖父`, `祖母`, `外祖父`, `外祖母`
+
+### Status Options (`src/lib/status-options.ts`)
+
+`computeAvailableStatuses()` returns the valid `InheritanceStatus` choices for a given person based on their relation and position in the tree. Used by `PersonEditor` to filter the status dropdown. Has its own test file.
+
+### URL State (`src/lib/url-state.ts`)
+
+`encodeState()` / `decodeState()` serialize the full family tree (decedent + persons array) into a compact URL hash for sharing. Uses indexed relation/status mappings and packs dates as `YYYYMMDD`. `coParentId` and `parentId` are stored as person-array indices.
 
 ### Component Structure
 
@@ -63,3 +72,4 @@ Tests live in `src/lib/__tests__/`. Focus is on calculation correctness — inhe
 - Two sub-heir types share `parentId` but differ by `status`: 代位繼承 (parent died before decedent) vs 再轉繼承 (parent died after decedent)
 - The `子女之配偶` relation is a display-only role for tree visualization — these persons do not participate in inheritance calculations
 - Excel export escapes formula injection characters (`=`, `+`, `-`, `@`) in cell values
+- **TypeScript JSX narrowing gotcha**: if an outer `&&` condition already excludes a union member (e.g., `relation !== '配偶'`), TypeScript narrows the type inside the block — repeating the same check inside triggers TS2367 "no overlap" error. Remove the inner redundant check.
