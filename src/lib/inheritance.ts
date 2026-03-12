@@ -344,13 +344,14 @@ function distributeShare(
     p => p.status === status && p.parentId === parentId && !visited.has(p.id)
   );
 
-  // 再轉繼承時，也納入在世的配偶 sub-heir（status 一般繼承、未離婚）
+  // 再轉繼承時，也納入在世的配偶 sub-heir（status 一般繼承、未離婚、未死亡）
   const livingSpouseSubHeirs = status === '再轉繼承'
     ? persons.filter(
         p => p.relation === '配偶' &&
              p.parentId === parentId &&
              p.status === '一般繼承' &&
              !p.divorceDate &&
+             !p.deathDate &&
              !visited.has(p.id)
       )
     : [];

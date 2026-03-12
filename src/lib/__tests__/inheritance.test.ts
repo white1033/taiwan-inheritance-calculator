@@ -816,6 +816,20 @@ describe('配偶作為再轉繼承 sub-heir', () => {
     expectShare(results, '丙', 1, 1);
   });
 
+  it('再轉繼承人的配偶 sub-heir 有 deathDate（status 仍為一般繼承）：應繼份歸零，份額由其他 sub-heirs 均分', () => {
+    // 甲(再轉) → sub-heirs: 配偶乙(status=一般繼承, deathDate set) + 子女丙(再轉)
+    // 配偶乙有 deathDate，視為死亡，不得繼承；全部份額歸子女丙
+    const persons: Person[] = [
+      { id: '1', name: '甲', relation: '子女', status: '再轉繼承', deathDate: '2024-01-01' },
+      { id: '2', name: '配偶乙', relation: '配偶', status: '一般繼承', parentId: '1', deathDate: '2024-06-01' },
+      { id: '3', name: '子女丙', relation: '子女', status: '再轉繼承', parentId: '1' },
+    ];
+    const results = calculateShares(decedent, persons);
+    expectShare(results, '甲', 0, 1);
+    expectShare(results, '配偶乙', 0, 1);
+    expectShare(results, '子女丙', 1, 1);
+  });
+
   it('再轉繼承人的離婚配偶 sub-heir 不得繼承，子女照常均分', () => {
     // 李璧秀(再轉) 有前配偶（已離婚，divorceDate）+ 4 子女（再轉）
     // 前配偶應得 0；4 子女各得 1/4 of 李璧秀的份額
